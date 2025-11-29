@@ -9,10 +9,6 @@ VALUES (
     $content
 );
 
--- @query component=shell title="Post Created"
-
--- @query component=text
-SELECT '<div class="alert alert-success">Post published successfully!</div>' as html;
-
--- @query component=text
-SELECT '<p><a href="/posts" role="button">Back to Posts List</a></p>' as html;
+-- Redirect back to posts list after successful creation
+-- @query component=redirect target="/posts"
+SELECT '/posts' as target;

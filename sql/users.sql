@@ -14,7 +14,8 @@ SELECT
     name,
     email,
     role,
-    datetime(created_at) as created_at
+    datetime(created_at) as created_at,
+    '/users/edit?id=' || id as edit
 FROM users
 WHERE
     ($q IS NULL OR $q = '' OR name LIKE '%' || $q || '%' OR email LIKE '%' || $q || '%')

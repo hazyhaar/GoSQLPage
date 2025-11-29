@@ -161,16 +161,65 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	// Check for HTMX request
 	isHTMX := r.Header.Get("HX-Request") == "true"
 
-	// Build page data
+	// Process special components (redirect, refresh, headers)
+	var filteredResults []*engine.Result
+	for _, result := range results {
+		switch result.Query.Component {
+		case "redirect":
+			// Handle redirect
+			target := result.Query.Options["target"]
+			if target == "" && len(result.Rows) > 0 {
+				if t, ok := result.Rows[0]["target"].(string); ok {
+					target = t
+				} else if t, ok := result.Rows[0]["url"].(string); ok {
+					target = t
+				}
+			}
+			if target != "" {
+				if isHTMX {
+					w.Header().Set("HX-Redirect", target)
+					w.WriteHeader(http.StatusOK)
+					return
+				}
+				http.Redirect(w, r, target, http.StatusSeeOther)
+				return
+			}
+
+		case "refresh":
+			// Trigger a page refresh via HTMX
+			if isHTMX {
+				w.Header().Set("HX-Refresh", "true")
+			}
+
+		case "trigger":
+			// Trigger custom HTMX events
+			if event := result.Query.Options["event"]; event != "" {
+				w.Header().Set("HX-Trigger", event)
+			}
+
+		case "header":
+			// Set custom headers
+			for key, val := range result.Query.Options {
+				if key != "component" {
+					w.Header().Set(key, val)
+				}
+			}
+
+		default:
+			filteredResults = append(filteredResults, result)
+		}
+	}
+
+	// Build page data with filtered results
 	pageData := &render.PageData{
 		Title:       "GoPage",
-		Results:     results,
+		Results:     filteredResults,
 		CurrentPath: r.URL.Path,
 		IsHTMX:      isHTMX,
 	}
 
 	// Extract title from shell component if present
-	for _, result := range results {
+	for _, result := range filteredResults {
 		if result.Query.Component == "shell" {
 			if title, ok := result.Query.Options["title"]; ok {
 				pageData.Title = title
