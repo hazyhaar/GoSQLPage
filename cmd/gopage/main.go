@@ -50,9 +50,9 @@ func main() {
 
 	logger.Info("database opened", "path", *dbPath)
 
-	// Register custom SQL functions
+	// Register custom SQL functions on all connections (writer + readers)
 	funcRegistry := funcs.New()
-	if err := funcRegistry.Apply(database.WriterConn()); err != nil {
+	if err := database.SetConnInit(funcRegistry.Apply); err != nil {
 		logger.Error("failed to register SQL functions", "error", err)
 		os.Exit(1)
 	}

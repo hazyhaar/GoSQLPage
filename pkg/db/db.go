@@ -12,6 +12,10 @@ import (
 	"zombiezen.com/go/sqlite/sqlitex"
 )
 
+// ConnInitFunc is a function that initializes a SQLite connection.
+// Used for registering custom SQL functions on all connections.
+type ConnInitFunc func(*sqlite.Conn) error
+
 // DB wraps SQLite connection pools with separate reader/writer access.
 type DB struct {
 	path string
@@ -22,6 +26,12 @@ type DB struct {
 	// writerConn is a single connection for writes (SQLite limitation)
 	writerConn *sqlite.Conn
 	writerMu   sync.Mutex
+
+	// connInit is called to initialize each connection (e.g., register functions)
+	connInit ConnInitFunc
+
+	// initializedConns tracks which connections have been initialized
+	initializedConns sync.Map // map[*sqlite.Conn]bool
 }
 
 // Config holds database configuration.
@@ -74,6 +84,18 @@ func (db *DB) Reader(ctx context.Context) (*sqlite.Conn, func(), error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("take reader: %w", err)
 	}
+
+	// Initialize connection if needed (e.g., register custom SQL functions)
+	if db.connInit != nil {
+		if _, initialized := db.initializedConns.Load(conn); !initialized {
+			if err := db.connInit(conn); err != nil {
+				db.readerPool.Put(conn)
+				return nil, nil, fmt.Errorf("init reader conn: %w", err)
+			}
+			db.initializedConns.Store(conn, true)
+		}
+	}
+
 	return conn, func() { db.readerPool.Put(conn) }, nil
 }
 
@@ -113,16 +135,18 @@ func (db *DB) WriterConn() *sqlite.Conn {
 	return db.writerConn
 }
 
-// ForEachReader applies a function to each reader connection.
-// Useful for registering custom SQL functions.
-func (db *DB) ForEachReader(ctx context.Context, fn func(*sqlite.Conn) error) error {
-	// Get all connections and apply function
-	// Note: This is a simplified approach. In production, you might want
-	// to use connection hooks in the pool instead.
-	conn, release, err := db.Reader(ctx)
-	if err != nil {
-		return err
+// SetConnInit sets the connection initialization function.
+// This function will be called once for each connection (writer + readers)
+// to register custom SQL functions or perform other setup.
+// Must be called before any Reader() calls.
+func (db *DB) SetConnInit(fn ConnInitFunc) error {
+	db.connInit = fn
+
+	// Initialize the writer connection immediately
+	if err := fn(db.writerConn); err != nil {
+		return fmt.Errorf("init writer conn: %w", err)
 	}
-	defer release()
-	return fn(conn)
+	db.initializedConns.Store(db.writerConn, true)
+
+	return nil
 }
