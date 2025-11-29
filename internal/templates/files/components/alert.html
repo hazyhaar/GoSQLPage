@@ -1,0 +1,17 @@
+{{/* Alert component - displays alert messages */}}
+{{/* Options: type (success, error, warning, info), dismissible */}}
+{{ $type := .Options.type | default "info" }}
+{{ $dismissible := .Options.dismissible | default "" }}
+
+{{ range .Result.Rows }}
+<div class="alert alert-{{ $type }} fade-in" role="alert"
+     {{ if $dismissible }}x-data="{ show: true }" x-show="show" x-transition{{ end }}>
+    {{ if index . "title" }}
+    <strong>{{ index . "title" }}</strong>
+    {{ end }}
+    {{ index . "message" | default (index . "content") }}
+    {{ if $dismissible }}
+    <button type="button" @click="show = false" aria-label="Close" style="float: right; background: none; border: none; cursor: pointer;">&times;</button>
+    {{ end }}
+</div>
+{{ end }}

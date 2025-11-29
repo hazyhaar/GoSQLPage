@@ -17,21 +17,34 @@ SELECT '<p>GoPage is a SQL-driven web application server written in Go.</p>
 <li>Multiple built-in components</li>
 </ul>' as html;
 
--- @query component=card title="Quick Links"
+-- @query component=card title="Application"
 SELECT
-    'Demo Table' as title,
-    'See a table component in action' as description,
-    '/demo/table' as link,
-    'View Demo' as action
+    'Users' as title,
+    'Manage application users' as description,
+    '/users' as link,
+    'View Users' as action
 UNION ALL
 SELECT
-    'Demo Form' as title,
+    'Posts' as title,
+    'Browse and create posts' as description,
+    '/posts' as link,
+    'View Posts' as action;
+
+-- @query component=card title="Component Demos"
+SELECT
+    'Table Demo' as title,
+    'See table component with data' as description,
+    '/demo/table' as link,
+    'View' as action
+UNION ALL
+SELECT
+    'Form Demo' as title,
     'Try the form component' as description,
     '/demo/form' as link,
-    'View Demo' as action
+    'View' as action
 UNION ALL
 SELECT
-    'Demo List' as title,
+    'List Demo' as title,
     'Check out the list component' as description,
     '/demo/list' as link,
-    'View Demo' as action;
+    'View' as action;

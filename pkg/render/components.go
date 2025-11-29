@@ -119,3 +119,37 @@ func (c *ErrorComponent) Name() string { return "error" }
 func (c *ErrorComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
 	return c.tmpl.ExecuteTemplate(w, "system/error.html", data)
 }
+
+// SearchComponent renders a search form.
+type SearchComponent struct {
+	tmpl *template.Template
+}
+
+func (c *SearchComponent) Name() string { return "search" }
+
+func (c *SearchComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
+	return c.tmpl.ExecuteTemplate(w, "components/search.html", struct {
+		Result  *engine.Result
+		Options map[string]string
+	}{
+		Result:  result,
+		Options: result.Query.Options,
+	})
+}
+
+// AlertComponent renders alert messages (success, error, warning, info).
+type AlertComponent struct {
+	tmpl *template.Template
+}
+
+func (c *AlertComponent) Name() string { return "alert" }
+
+func (c *AlertComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
+	return c.tmpl.ExecuteTemplate(w, "components/alert.html", struct {
+		Result  *engine.Result
+		Options map[string]string
+	}{
+		Result:  result,
+		Options: result.Query.Options,
+	})
+}

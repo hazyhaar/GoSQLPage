@@ -1,5 +1,12 @@
 {{/* Table component - displays data as a table */}}
-<article class="fade-in" x-data="{ sortCol: '', sortAsc: true }">
+{{/* Options: title, page, limit, total, link (base URL for pagination) */}}
+{{ $page := .Options.page | default "1" }}
+{{ $limit := .Options.limit | default "10" }}
+{{ $total := .Options.total | default "0" }}
+{{ $link := .Options.link | default "" }}
+{{ $tableId := .Options.id | default "table" }}
+
+<article class="fade-in" id="{{ $tableId }}-container" x-data="{ sortCol: '', sortAsc: true }">
     {{ with .Options.title }}
     <header>
         <h2>{{ . }}</h2>
@@ -8,26 +15,83 @@
 
     {{ if .Result.Rows }}
     <figure>
-        <table role="grid">
+        <table role="grid" id="{{ $tableId }}">
             <thead>
                 <tr>
                     {{ range .Result.Columns }}
                     <th scope="col">{{ . | title }}</th>
                     {{ end }}
+                    {{ if .Options.actions }}
+                    <th scope="col">Actions</th>
+                    {{ end }}
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="{{ $tableId }}-body">
                 {{ range .Result.Rows }}
                 <tr>
                     {{ $row := . }}
                     {{ range $.Result.Columns }}
-                    <td>{{ index $row . }}</td>
+                    <td>
+                        {{- $val := index $row . -}}
+                        {{- if hasPrefix (printf "%v" $val) "http" -}}
+                            <a href="{{ $val }}" target="_blank">{{ $val }}</a>
+                        {{- else -}}
+                            {{ $val }}
+                        {{- end -}}
+                    </td>
+                    {{ end }}
+                    {{ if $.Options.actions }}
+                    <td>
+                        {{ with index $row "id" }}
+                        <a href="{{ $.Options.edit_link }}?id={{ . }}" role="button" class="outline secondary" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">Edit</a>
+                        {{ end }}
+                    </td>
                     {{ end }}
                 </tr>
                 {{ end }}
             </tbody>
         </table>
     </figure>
+
+    {{/* Pagination controls */}}
+    {{ if and $link (ne $total "0") }}
+    {{ $pageInt := atoi $page }}
+    {{ $limitInt := atoi $limit }}
+    {{ $totalInt := atoi $total }}
+    {{ $totalPages := div (add $totalInt (sub $limitInt 1)) $limitInt }}
+    {{ $hasPrev := gt $pageInt 1 }}
+    {{ $hasNext := lt $pageInt $totalPages }}
+
+    <nav aria-label="Pagination">
+        <ul>
+            <li>
+                {{ if $hasPrev }}
+                <a href="{{ $link }}?page={{ sub $pageInt 1 }}&limit={{ $limit }}"
+                   hx-get="{{ $link }}?page={{ sub $pageInt 1 }}&limit={{ $limit }}"
+                   hx-target="#{{ $tableId }}-container"
+                   hx-swap="outerHTML"
+                   hx-push-url="true">&laquo; Previous</a>
+                {{ else }}
+                <span class="secondary">&laquo; Previous</span>
+                {{ end }}
+            </li>
+            <li>
+                <span>Page {{ $page }} of {{ $totalPages }} ({{ $total }} items)</span>
+            </li>
+            <li>
+                {{ if $hasNext }}
+                <a href="{{ $link }}?page={{ add $pageInt 1 }}&limit={{ $limit }}"
+                   hx-get="{{ $link }}?page={{ add $pageInt 1 }}&limit={{ $limit }}"
+                   hx-target="#{{ $tableId }}-container"
+                   hx-swap="outerHTML"
+                   hx-push-url="true">Next &raquo;</a>
+                {{ else }}
+                <span class="secondary">Next &raquo;</span>
+                {{ end }}
+            </li>
+        </ul>
+    </nav>
+    {{ end }}
 
     {{ with .Options.footer }}
     <footer>

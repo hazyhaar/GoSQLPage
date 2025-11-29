@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/hazyhaar/gopage/pkg/engine"
@@ -71,6 +72,8 @@ func New(cfg Config) (*Renderer, error) {
 	r.Register(&ShellComponent{tmpl: tmpl})
 	r.Register(&FormComponent{tmpl: tmpl})
 	r.Register(&ErrorComponent{tmpl: tmpl})
+	r.Register(&SearchComponent{tmpl: tmpl})
+	r.Register(&AlertComponent{tmpl: tmpl})
 
 	return r, nil
 }
@@ -173,6 +176,70 @@ var templateFuncs = template.FuncMap{
 		}
 		return false
 	},
+	// Math functions for pagination
+	"atoi": func(s interface{}) int {
+		switch v := s.(type) {
+		case string:
+			i, _ := strconv.Atoi(v)
+			return i
+		case int:
+			return v
+		case int64:
+			return int(v)
+		default:
+			return 0
+		}
+	},
+	"add": func(a, b int) int {
+		return a + b
+	},
+	"sub": func(a, b int) int {
+		return a - b
+	},
+	"mul": func(a, b int) int {
+		return a * b
+	},
+	"div": func(a, b int) int {
+		if b == 0 {
+			return 0
+		}
+		return a / b
+	},
+	"mod": func(a, b int) int {
+		if b == 0 {
+			return 0
+		}
+		return a % b
+	},
+	"gt": func(a, b int) bool {
+		return a > b
+	},
+	"lt": func(a, b int) bool {
+		return a < b
+	},
+	"gte": func(a, b int) bool {
+		return a >= b
+	},
+	"lte": func(a, b int) bool {
+		return a <= b
+	},
+	"eq": func(a, b interface{}) bool {
+		return a == b
+	},
+	"ne": func(a, b interface{}) bool {
+		return a != b
+	},
+	// String helpers
+	"hasPrefix": func(s, prefix string) bool {
+		return strings.HasPrefix(s, prefix)
+	},
+	"hasSuffix": func(s, suffix string) bool {
+		return strings.HasSuffix(s, suffix)
+	},
+	"contains": func(s, substr string) bool {
+		return strings.Contains(s, substr)
+	},
+	"printf": fmt.Sprintf,
 }
 
 // MustLoadTemplates is a helper to load embedded templates.
