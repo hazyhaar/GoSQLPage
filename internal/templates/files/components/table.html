@@ -1,0 +1,41 @@
+{{/* Table component - displays data as a table */}}
+<article class="fade-in" x-data="{ sortCol: '', sortAsc: true }">
+    {{ with .Options.title }}
+    <header>
+        <h2>{{ . }}</h2>
+    </header>
+    {{ end }}
+
+    {{ if .Result.Rows }}
+    <figure>
+        <table role="grid">
+            <thead>
+                <tr>
+                    {{ range .Result.Columns }}
+                    <th scope="col">{{ . | title }}</th>
+                    {{ end }}
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Result.Rows }}
+                <tr>
+                    {{ $row := . }}
+                    {{ range $.Result.Columns }}
+                    <td>{{ index $row . }}</td>
+                    {{ end }}
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </figure>
+
+    {{ with .Options.footer }}
+    <footer>
+        <small>{{ . }}</small>
+    </footer>
+    {{ end }}
+
+    {{ else }}
+    <p><em>No data to display.</em></p>
+    {{ end }}
+</article>

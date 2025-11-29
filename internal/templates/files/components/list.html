@@ -1,0 +1,30 @@
+{{/* List component - displays data as a list */}}
+<article class="fade-in" x-data>
+    {{ with .Options.title }}
+    <header>
+        <h2>{{ . }}</h2>
+    </header>
+    {{ end }}
+
+    {{ if .Result.Rows }}
+    <ul>
+        {{ range .Result.Rows }}
+        <li>
+            {{ if index . "link" }}
+                <a href="{{ index . "link" }}">
+                    {{ index . "title" | default (index . "name") | default (index . "label") }}
+                </a>
+            {{ else }}
+                {{ index . "title" | default (index . "name") | default (index . "label") | default (index . "content") }}
+            {{ end }}
+
+            {{ with index . "description" }}
+            <br><small>{{ . }}</small>
+            {{ end }}
+        </li>
+        {{ end }}
+    </ul>
+    {{ else }}
+    <p><em>No items to display.</em></p>
+    {{ end }}
+</article>

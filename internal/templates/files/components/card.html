@@ -1,0 +1,44 @@
+{{/* Card component - displays data as cards */}}
+{{ with .Options.title }}
+<h2>{{ . }}</h2>
+{{ end }}
+
+<div class="card-grid">
+    {{ range .Result.Rows }}
+    <article class="fade-in" x-data>
+        {{ with index . "image" }}
+        <img src="{{ . }}" alt="">
+        {{ end }}
+
+        <header>
+            <h3>
+                {{ if index . "link" }}
+                <a href="{{ index . "link" }}">{{ index . "title" | default (index . "name") }}</a>
+                {{ else }}
+                {{ index . "title" | default (index . "name") }}
+                {{ end }}
+            </h3>
+        </header>
+
+        {{ with index . "description" }}
+        <p>{{ . }}</p>
+        {{ end }}
+
+        {{ with index . "content" }}
+        <p>{{ . }}</p>
+        {{ end }}
+
+        {{ if or (index . "action") (index . "action_link") }}
+        <footer>
+            <a href="{{ index . "action_link" | default "#" }}" role="button">
+                {{ index . "action" | default "View" }}
+            </a>
+        </footer>
+        {{ end }}
+    </article>
+    {{ end }}
+</div>
+
+{{ if not .Result.Rows }}
+<p><em>No cards to display.</em></p>
+{{ end }}

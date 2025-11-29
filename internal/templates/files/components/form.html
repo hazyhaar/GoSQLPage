@@ -1,0 +1,86 @@
+{{/* Form component - generates a form from SQL results */}}
+{{/* Each row defines a form field: type, name, label, value, required, placeholder */}}
+<article class="fade-in" x-data="{ submitting: false }">
+    {{ with .Options.title }}
+    <header>
+        <h2>{{ . }}</h2>
+    </header>
+    {{ end }}
+
+    <form
+        method="{{ .Options.method | default "POST" }}"
+        action="{{ .Options.action | default "" }}"
+        {{ if .Options.hx_post }}
+        hx-post="{{ .Options.hx_post }}"
+        hx-target="{{ .Options.hx_target | default "#content" }}"
+        hx-swap="{{ .Options.hx_swap | default "innerHTML" }}"
+        {{ end }}
+        @submit="submitting = true"
+    >
+        {{ range .Result.Rows }}
+        {{ $type := index . "type" | default "text" }}
+        {{ $name := index . "name" }}
+        {{ $label := index . "label" | default $name }}
+        {{ $value := index . "value" | default "" }}
+        {{ $placeholder := index . "placeholder" | default "" }}
+        {{ $required := index . "required" }}
+
+        {{ if eq $type "hidden" }}
+            <input type="hidden" name="{{ $name }}" value="{{ $value }}">
+        {{ else if eq $type "textarea" }}
+            <label for="{{ $name }}">
+                {{ $label }}
+                <textarea
+                    id="{{ $name }}"
+                    name="{{ $name }}"
+                    placeholder="{{ $placeholder }}"
+                    {{ if $required }}required{{ end }}
+                >{{ $value }}</textarea>
+            </label>
+        {{ else if eq $type "select" }}
+            <label for="{{ $name }}">
+                {{ $label }}
+                <select id="{{ $name }}" name="{{ $name }}" {{ if $required }}required{{ end }}>
+                    {{/* Options would need to be parsed from a JSON string or separate query */}}
+                    <option value="">Select...</option>
+                </select>
+            </label>
+        {{ else if eq $type "checkbox" }}
+            <label>
+                <input
+                    type="checkbox"
+                    name="{{ $name }}"
+                    value="{{ $value | default "1" }}"
+                    {{ if index . "checked" }}checked{{ end }}
+                >
+                {{ $label }}
+            </label>
+        {{ else if eq $type "submit" }}
+            <button type="submit" :disabled="submitting">
+                <span x-show="!submitting">{{ $label | default "Submit" }}</span>
+                <span x-show="submitting" x-cloak>Submitting...</span>
+            </button>
+        {{ else }}
+            <label for="{{ $name }}">
+                {{ $label }}
+                <input
+                    type="{{ $type }}"
+                    id="{{ $name }}"
+                    name="{{ $name }}"
+                    value="{{ $value }}"
+                    placeholder="{{ $placeholder }}"
+                    {{ if $required }}required{{ end }}
+                >
+            </label>
+        {{ end }}
+        {{ end }}
+
+        {{/* Default submit button if not defined in SQL */}}
+        {{ if not (hasSubmit .Result.Rows) }}
+        <button type="submit" :disabled="submitting">
+            <span x-show="!submitting">{{ .Options.submit_label | default "Submit" }}</span>
+            <span x-show="submitting" x-cloak>Submitting...</span>
+        </button>
+        {{ end }}
+    </form>
+</article>
