@@ -12,6 +12,7 @@ import (
 
 	"github.com/hazyhaar/gopage/internal/templates"
 	"github.com/hazyhaar/gopage/pkg/db"
+	"github.com/hazyhaar/gopage/pkg/funcs"
 	"github.com/hazyhaar/gopage/pkg/render"
 	"github.com/hazyhaar/gopage/pkg/server"
 )
@@ -48,6 +49,14 @@ func main() {
 	defer database.Close()
 
 	logger.Info("database opened", "path", *dbPath)
+
+	// Register custom SQL functions
+	funcRegistry := funcs.New()
+	if err := funcRegistry.Apply(database.WriterConn()); err != nil {
+		logger.Error("failed to register SQL functions", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("registered custom SQL functions")
 
 	// Load templates
 	templateFS, err := fs.Sub(templates.FS, "files")

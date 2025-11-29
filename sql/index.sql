@@ -47,4 +47,10 @@ SELECT
     'List Demo' as title,
     'Check out the list component' as description,
     '/demo/list' as link,
+    'View' as action
+UNION ALL
+SELECT
+    'SQL Functions' as title,
+    'Custom SQL functions (hash, JSON, HTTP, LLM)' as description,
+    '/demo/functions' as link,
     'View' as action;

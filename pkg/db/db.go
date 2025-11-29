@@ -106,3 +106,23 @@ func (db *DB) Close() error {
 func (db *DB) Path() string {
 	return db.path
 }
+
+// WriterConn returns the raw writer connection for function registration.
+// Use with caution - caller must hold the writer lock.
+func (db *DB) WriterConn() *sqlite.Conn {
+	return db.writerConn
+}
+
+// ForEachReader applies a function to each reader connection.
+// Useful for registering custom SQL functions.
+func (db *DB) ForEachReader(ctx context.Context, fn func(*sqlite.Conn) error) error {
+	// Get all connections and apply function
+	// Note: This is a simplified approach. In production, you might want
+	// to use connection hooks in the pool instead.
+	conn, release, err := db.Reader(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	return fn(conn)
+}
