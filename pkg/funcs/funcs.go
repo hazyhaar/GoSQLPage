@@ -31,6 +31,7 @@ func New() *Registry {
 	r.Register(HTTPFuncs()...)
 	r.Register(LLMFuncs()...)
 	r.Register(UtilFuncs()...)
+	r.Register(FormatFuncs()...)
 	r.Register(SSEFuncs()...)
 
 	return r
