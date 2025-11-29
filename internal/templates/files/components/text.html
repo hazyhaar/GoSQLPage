@@ -1,0 +1,21 @@
+{{/* Text component - displays simple content */}}
+<article class="fade-in" x-data>
+    {{ with .Options.title }}
+    <header>
+        <h2>{{ . }}</h2>
+    </header>
+    {{ end }}
+
+    {{ range .Result.Rows }}
+        {{ if index . "content" }}
+            <p>{{ index . "content" }}</p>
+        {{ else if index . "html" }}
+            {{ index . "html" | safe }}
+        {{ else }}
+            {{/* Display all columns */}}
+            {{ range $key, $value := . }}
+            <p><strong>{{ $key }}:</strong> {{ $value }}</p>
+            {{ end }}
+        {{ end }}
+    {{ end }}
+</article>

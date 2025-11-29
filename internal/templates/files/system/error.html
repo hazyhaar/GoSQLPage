@@ -1,0 +1,19 @@
+{{/* Error component - displays error messages */}}
+<article class="fade-in">
+    <header>
+        <h2>Error {{ if .Error }}{{ .Error.Status }}{{ end }}</h2>
+    </header>
+
+    <div class="alert alert-error">
+        {{ if .Error }}
+            <p>{{ .Error.Message }}</p>
+        {{ else }}
+            <p>An unexpected error occurred.</p>
+        {{ end }}
+    </div>
+
+    <footer>
+        <a href="/" role="button" class="secondary">Return Home</a>
+        <a href="javascript:history.back()" role="button" class="outline">Go Back</a>
+    </footer>
+</article>

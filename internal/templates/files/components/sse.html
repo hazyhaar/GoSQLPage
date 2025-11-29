@@ -1,0 +1,48 @@
+{{/* SSE component - subscribes to Server-Sent Events */}}
+{{/* Options: channel, target, event (default: message), swap (default: innerHTML) */}}
+{{ $channel := .Options.channel | default "default" }}
+{{ $target := .Options.target | default "#sse-content" }}
+{{ $event := .Options.event | default "message" }}
+{{ $swap := .Options.swap | default "innerHTML" }}
+
+<div
+    id="sse-container-{{ $channel }}"
+    hx-ext="sse"
+    sse-connect="/events?channel={{ $channel }}"
+    sse-swap="{{ $event }}"
+    hx-target="{{ $target }}"
+    hx-swap="{{ $swap }}"
+>
+    {{ with .Options.title }}
+    <h3>{{ . }}</h3>
+    {{ end }}
+
+    <div id="{{ $target | trimPrefix "#" }}" class="sse-content">
+        {{ range .Result.Rows }}
+            {{ if index . "content" }}
+                {{ index . "content" }}
+            {{ else if index . "html" }}
+                {{ index . "html" | safe }}
+            {{ end }}
+        {{ end }}
+        {{ if not .Result.Rows }}
+        <p><em>Waiting for events...</em></p>
+        {{ end }}
+    </div>
+
+    {{ with .Options.status }}
+    <small class="sse-status" x-data="{ connected: false }"
+        @sse:connected="connected = true"
+        @sse:disconnected="connected = false">
+        <span x-show="connected" style="color: green;">Connected</span>
+        <span x-show="!connected" style="color: gray;">Connecting...</span>
+    </small>
+    {{ end }}
+</div>
+
+<style>
+    .sse-content {
+        min-height: 2rem;
+        transition: all 0.3s ease;
+    }
+</style>

@@ -1,0 +1,6 @@
+# Binary
+/gopage
+
+# Common ignores
+*.db
+*.log

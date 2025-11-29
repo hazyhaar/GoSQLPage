@@ -1,0 +1,29 @@
+{{/* Search component - displays a search form */}}
+{{/* Options: placeholder, target, action, name */}}
+{{ $placeholder := .Options.placeholder | default "Search..." }}
+{{ $target := .Options.target | default "#content" }}
+{{ $action := .Options.action | default "" }}
+{{ $name := .Options.name | default "q" }}
+
+<form
+    class="fade-in"
+    role="search"
+    {{ if $action }}
+    action="{{ $action }}"
+    hx-get="{{ $action }}"
+    hx-target="{{ $target }}"
+    hx-push-url="true"
+    hx-trigger="submit, keyup changed delay:300ms from:input"
+    {{ end }}
+>
+    <input
+        type="search"
+        name="{{ $name }}"
+        placeholder="{{ $placeholder }}"
+        aria-label="Search"
+        {{ with .Options.value }}value="{{ . }}"{{ end }}
+    >
+    {{ if not $action }}
+    <small>Enter a search query above</small>
+    {{ end }}
+</form>
