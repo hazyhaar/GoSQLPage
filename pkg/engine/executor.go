@@ -116,13 +116,24 @@ func normalizeParams(sql string) string {
 
 // bindParams binds parameters to a prepared statement.
 func bindParams(stmt *sqlite.Stmt, params Params) error {
-	for name, value := range params {
-		// Try both :name and $name
-		idx := stmt.FindParam(":" + name)
-		if idx == 0 {
-			idx = stmt.FindParam("$" + name)
+	// Build a map of parameter names to indices
+	paramIndices := make(map[string]int)
+	for i := 1; i <= stmt.BindParamCount(); i++ {
+		name := stmt.BindParamName(i)
+		if name != "" {
+			paramIndices[name] = i
 		}
-		if idx > 0 {
+	}
+
+	// Bind each provided parameter
+	for name, value := range params {
+		// Try :name format
+		if idx, ok := paramIndices[":"+name]; ok {
+			stmt.BindText(idx, value)
+			continue
+		}
+		// Try $name format
+		if idx, ok := paramIndices["$"+name]; ok {
 			stmt.BindText(idx, value)
 		}
 	}

@@ -1,7 +1,6 @@
 package funcs
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"

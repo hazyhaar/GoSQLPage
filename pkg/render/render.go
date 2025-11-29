@@ -74,6 +74,7 @@ func New(cfg Config) (*Renderer, error) {
 	r.Register(&ErrorComponent{tmpl: tmpl})
 	r.Register(&SearchComponent{tmpl: tmpl})
 	r.Register(&AlertComponent{tmpl: tmpl})
+	r.Register(&SSEComponent{tmpl: tmpl})
 
 	return r, nil
 }
@@ -238,6 +239,15 @@ var templateFuncs = template.FuncMap{
 	},
 	"contains": func(s, substr string) bool {
 		return strings.Contains(s, substr)
+	},
+	"trimPrefix": func(s, prefix string) string {
+		return strings.TrimPrefix(s, prefix)
+	},
+	"trimSuffix": func(s, suffix string) string {
+		return strings.TrimSuffix(s, suffix)
+	},
+	"replace": func(s, old, new string) string {
+		return strings.ReplaceAll(s, old, new)
 	},
 	"printf": fmt.Sprintf,
 }

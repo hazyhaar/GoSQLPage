@@ -31,6 +31,7 @@ func New() *Registry {
 	r.Register(HTTPFuncs()...)
 	r.Register(LLMFuncs()...)
 	r.Register(UtilFuncs()...)
+	r.Register(SSEFuncs()...)
 
 	return r
 }
@@ -43,16 +44,14 @@ func (r *Registry) Register(funcs ...Func) {
 // Apply registers all functions on a SQLite connection.
 func (r *Registry) Apply(conn *sqlite.Conn) error {
 	for _, f := range r.funcs {
-		opts := &sqlite.FunctionOptions{
-			NArgs:         f.NumArgs,
-			Deterministic: f.Deterministic,
+		fn := f // capture for closure
+		impl := &sqlite.FunctionImpl{
+			NArgs:         fn.NumArgs,
+			Deterministic: fn.Deterministic,
+			Scalar:        fn.Func,
 		}
 
-		// Create a scalar function
-		fn := f // capture for closure
-		err := conn.CreateFunction(f.Name, opts, func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
-			return fn.Func(ctx, args)
-		})
+		err := conn.CreateFunction(f.Name, impl)
 		if err != nil {
 			return err
 		}

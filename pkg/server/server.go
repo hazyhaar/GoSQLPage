@@ -14,6 +14,7 @@ import (
 	"github.com/hazyhaar/gopage/pkg/db"
 	"github.com/hazyhaar/gopage/pkg/engine"
 	"github.com/hazyhaar/gopage/pkg/render"
+	"github.com/hazyhaar/gopage/pkg/sse"
 	"zombiezen.com/go/sqlite"
 )
 
@@ -74,6 +75,11 @@ func (s *Server) setupRoutes() {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
+
+	// SSE endpoint for real-time events
+	sseHub := sse.NewHub(s.logger)
+	sse.SetGlobalHub(sseHub)
+	r.Get("/events", sseHub.ServeHTTP)
 
 	// SQL page handler - catch all
 	r.HandleFunc("/*", s.handlePage)

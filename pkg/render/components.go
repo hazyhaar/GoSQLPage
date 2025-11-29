@@ -153,3 +153,20 @@ func (c *AlertComponent) Render(w io.Writer, result *engine.Result, data *PageDa
 		Options: result.Query.Options,
 	})
 }
+
+// SSEComponent renders a Server-Sent Events subscriber.
+type SSEComponent struct {
+	tmpl *template.Template
+}
+
+func (c *SSEComponent) Name() string { return "sse" }
+
+func (c *SSEComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
+	return c.tmpl.ExecuteTemplate(w, "components/sse.html", struct {
+		Result  *engine.Result
+		Options map[string]string
+	}{
+		Result:  result,
+		Options: result.Query.Options,
+	})
+}
