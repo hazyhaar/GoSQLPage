@@ -1,0 +1,32 @@
+# GoSQLPage v2.1 Garbage Collection Configuration
+
+[gc]
+# Run interval in hours
+interval_hours = 6
+
+[sessions]
+# Age in days before cleaning abandoned sessions (status = active, no activity)
+abandoned_days = 7
+# Age in days before cleaning merged sessions
+merged_days = 1
+# Age in days before archiving failed sessions
+failed_archive_days = 30
+
+[audit]
+# Retention period in days
+retention_days = 90
+# Archive after N days
+archive_after_days = 30
+# Archive file path pattern
+archive_path = "./backup/audit_archive_{date}.db"
+
+[database]
+# Vacuum threshold (fragmentation percentage)
+vacuum_threshold = 20
+# Run vacuum only during low-activity hours (0-23)
+vacuum_start_hour = 2
+vacuum_end_hour = 5
+
+[cache]
+# Expire cache entries older than N hours
+expire_hours = 24

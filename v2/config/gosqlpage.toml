@@ -1,0 +1,32 @@
+# GoSQLPage v2.1 Configuration
+
+[server]
+host = "0.0.0.0"
+port = 8080
+debug = false
+
+[database]
+# Permanent data directory
+data_dir = "./data"
+# Session storage
+sessions_dir = "./sessions"
+# Reader pool size
+reader_pool_size = 4
+
+[session]
+# Maximum session age before GC considers it abandoned
+max_inactive_hours = 24
+# Maximum time a submitted session waits in queue
+max_queue_hours = 1
+
+[cache]
+# Page cache directory
+pages_dir = "./cache/pages"
+# Enable page caching
+enabled = true
+# Cache TTL in seconds (0 = until invalidation)
+ttl = 0
+
+[logging]
+level = "info"  # debug, info, warn, error
+format = "text" # text, json

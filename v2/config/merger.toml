@@ -1,0 +1,27 @@
+# GoSQLPage v2.1 Merger Configuration
+
+[merger]
+# Queue directories
+pending_dir = "./queue/pending"
+processing_dir = "./queue/processing"
+done_dir = "./queue/done"
+failed_dir = "./queue/failed"
+
+# Processing settings
+poll_interval_ms = 500
+max_retries = 3
+lock_timeout_ms = 30000
+
+[recovery]
+# On startup, recover sessions stuck in processing
+recover_on_startup = true
+# Maximum age of a processing session before considering it stuck
+stuck_threshold_seconds = 300
+
+[validation]
+# Enable schema validation
+validate_schema = true
+# Enable permission checks
+check_permissions = true
+# Enable structural conflict detection
+detect_conflicts = true
