@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hazyhaar/gopage/v2/pkg/audit"
 	"github.com/hazyhaar/gopage/v2/pkg/blocks"
 	"github.com/hazyhaar/gopage/v2/pkg/session"
 	_ "modernc.org/sqlite"
@@ -22,18 +21,18 @@ import (
 
 // Config holds merger configuration.
 type Config struct {
-	ContentDBPath   string
-	SchemaDBPath    string
-	AuditDBPath     string
-	PendingDir      string
-	ProcessingDir   string
-	DoneDir         string
-	FailedDir       string
-	PollIntervalMS  int
-	MaxRetries      int
-	LockTimeoutMS   int
+	ContentDBPath    string
+	SchemaDBPath     string
+	AuditDBPath      string
+	PendingDir       string
+	ProcessingDir    string
+	DoneDir          string
+	FailedDir        string
+	PollIntervalMS   int
+	MaxRetries       int
+	LockTimeoutMS    int
 	RecoverOnStartup bool
-	Logger          *slog.Logger
+	Logger           *slog.Logger
 }
 
 // Merger is the singleton daemon that merges sessions into content.db.
@@ -48,10 +47,10 @@ type Merger struct {
 	logger    *slog.Logger
 
 	// Metrics
-	mergesTotal     int64
-	mergesSuccess   int64
-	mergesFailed    int64
-	mergesConflict  int64
+	mergesTotal    int64
+	mergesSuccess  int64
+	mergesFailed   int64
+	mergesConflict int64
 }
 
 // New creates a new merger daemon.

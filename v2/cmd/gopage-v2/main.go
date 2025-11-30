@@ -25,7 +25,6 @@ import (
 	"github.com/hazyhaar/gopage/pkg/render"
 	"github.com/hazyhaar/gopage/pkg/sse"
 	"github.com/hazyhaar/gopage/v2/pkg/api"
-	"zombiezen.com/go/sqlite"
 	"github.com/hazyhaar/gopage/v2/pkg/audit"
 	"github.com/hazyhaar/gopage/v2/pkg/backup"
 	"github.com/hazyhaar/gopage/v2/pkg/bot"
@@ -35,6 +34,7 @@ import (
 	"github.com/hazyhaar/gopage/v2/pkg/metrics"
 	"github.com/hazyhaar/gopage/v2/pkg/session"
 	_ "modernc.org/sqlite"
+	"zombiezen.com/go/sqlite"
 )
 
 func main() {
@@ -185,7 +185,7 @@ func main() {
 
 	// Create backup manager
 	backupMgr, err := backup.New(backup.Config{
-		BackupDir:     *backupDir,
+		BackupDir: *backupDir,
 		Databases: []backup.DatabaseConfig{
 			{Name: "content", Path: contentDBPath},
 			{Name: "schema", Path: schemaDBPath},
@@ -271,7 +271,7 @@ func main() {
 	// Open content.db with v1 db package for SQL page rendering
 	// (v1 uses zombiezen.com/go/sqlite, v2 uses modernc.org/sqlite)
 	sqlPageDB, err := db.Open(db.Config{
-		Path:        contentPath,
+		Path:        contentDBPath,
 		ReaderCount: 4,
 	})
 	if err != nil {
@@ -578,7 +578,7 @@ func (h *SQLPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, query := range file.Queries {
 		result, err := h.executor.Execute(ctx, sqlConn, query, params)
 		if err != nil {
-			h.logger.Error("execute error", "query", query.Name, "error", err)
+			h.logger.Error("execute error", "query", query.Component, "error", err)
 			h.renderError(w, r, http.StatusInternalServerError, "Query failed: "+err.Error())
 			return
 		}
@@ -587,8 +587,9 @@ func (h *SQLPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Render page
 	isHTMX := r.Header.Get("HX-Request") == "true"
+	pageTitle := strings.TrimSuffix(filepath.Base(file.Path), ".sql")
 	pageData := &render.PageData{
-		Title:       file.Title,
+		Title:       pageTitle,
 		Results:     results,
 		CurrentPath: r.URL.Path,
 		IsHTMX:      isHTMX,

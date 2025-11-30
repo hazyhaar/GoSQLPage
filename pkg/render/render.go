@@ -52,10 +52,19 @@ func New(cfg Config) (*Renderer, error) {
 		cfg.Logger = slog.Default()
 	}
 
-	// Parse all templates
-	tmpl, err := template.New("").Funcs(templateFuncs).ParseFS(cfg.TemplatesFS, "**/*.html")
-	if err != nil {
-		return nil, fmt.Errorf("parse templates: %w", err)
+	// Parse all templates from each directory
+	// Note: Go's glob doesn't support ** for recursive matching
+	tmpl := template.New("").Funcs(templateFuncs)
+	patterns := []string{
+		"layouts/*.html",
+		"components/*.html",
+		"system/*.html",
+	}
+	for _, pattern := range patterns {
+		_, err := tmpl.ParseFS(cfg.TemplatesFS, pattern)
+		if err != nil {
+			return nil, fmt.Errorf("parse templates %s: %w", pattern, err)
+		}
 	}
 
 	r := &Renderer{
