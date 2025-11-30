@@ -32,11 +32,11 @@ LEFT JOIN forum_sessions s ON s.id = $session_id AND s.expires_at > datetime('no
 WHERE cat.slug = $slug;
 
 -- Pinned topics
--- @query component=table title="Sujets epingles"
+-- @query component=table title="Sujets épinglés"
 SELECT
-    '<span class="badge badge-pinned">Epingle</span> <a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
+    '<span class="badge badge-pinned">Épinglé</span> <a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
     '<a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a>' as "Auteur",
-    t.reply_count as "Reponses",
+    t.reply_count as "Réponses",
     t.view_count as "Vues",
     time_ago(COALESCE(t.last_reply_at, t.created_at)) as "Dernier msg"
 FROM forum_topics t
@@ -52,7 +52,7 @@ SELECT
     CASE WHEN t.is_solved THEN '<span class="badge badge-solved">Resolu</span> ' ELSE '' END ||
     '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
     '<a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a>' as "Auteur",
-    t.reply_count as "Reponses",
+    t.reply_count as "Réponses",
     t.view_count as "Vues",
     time_ago(COALESCE(t.last_reply_at, t.created_at)) as "Dernier msg"
 FROM forum_topics t

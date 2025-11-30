@@ -17,10 +17,10 @@ SELECT '<div class="topic-header">
         Par <a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a>
         &bull; ' || time_ago(t.created_at) || '
         &bull; ' || t.view_count || ' vues
-        &bull; ' || t.reply_count || ' reponses
-        ' || CASE WHEN t.is_pinned THEN '&bull; <span class="badge badge-pinned">Epingle</span>' ELSE '' END || '
-        ' || CASE WHEN t.is_locked THEN '&bull; <span class="badge badge-locked">Verrouille</span>' ELSE '' END || '
-        ' || CASE WHEN t.is_solved THEN '&bull; <span class="badge badge-solved">Resolu</span>' ELSE '' END || '
+        &bull; ' || t.reply_count || ' réponses
+        ' || CASE WHEN t.is_pinned THEN '&bull; <span class="badge badge-pinned">Épinglé</span>' ELSE '' END || '
+        ' || CASE WHEN t.is_locked THEN '&bull; <span class="badge badge-locked">Verrouillé</span>' ELSE '' END || '
+        ' || CASE WHEN t.is_solved THEN '&bull; <span class="badge badge-solved">Résolu</span>' ELSE '' END || '
     </div>
 </div>' as html
 FROM forum_topics t
@@ -47,7 +47,7 @@ SELECT '<article class="post post-original" id="post-0">
                         <span class="icon">+</span> ' ||
                         (SELECT COUNT(*) FROM forum_reactions r WHERE r.topic_id = t.id AND r.reaction_type = ''like'') ||
                     '</button>
-                    <a href="/forum/reply?topic=' || t.id || '" class="btn btn-sm">Repondre</a>'
+                    <a href="/forum/reply?topic=' || t.id || '" class="btn btn-sm">Répondre</a>'
                 ELSE '' END || '
                 ' || CASE WHEN s.user_id = t.user_id OR cu.role IN (''admin'', ''moderator'') THEN
                     '<a href="/forum/edit-topic?id=' || t.id || '" class="btn btn-sm">Modifier</a>'
@@ -72,16 +72,16 @@ SELECT '<article class="post' || CASE WHEN p.is_solution THEN ' post-solution' E
         <div class="author-stats">' || u.post_count || ' messages</div>
     </aside>
     <div class="post-content">
-        ' || CASE WHEN p.is_solution THEN '<div class="solution-badge">Solution acceptee</div>' ELSE '' END || '
+        ' || CASE WHEN p.is_solution THEN '<div class="solution-badge">Solution acceptée</div>' ELSE '' END || '
         ' || CASE WHEN p.parent_id IS NOT NULL THEN
-            '<blockquote class="quote">En reponse a ' ||
+            '<blockquote class="quote">En réponse à ' ||
             escape_html((SELECT display_name FROM forum_users WHERE id = (SELECT user_id FROM forum_posts WHERE id = p.parent_id))) ||
             '</blockquote>'
         ELSE '' END || '
         <div class="post-body">' || COALESCE(p.content_html, escape_html(p.content)) || '</div>
         <footer class="post-footer">
             <span class="post-date">' || time_ago(p.created_at) ||
-            CASE WHEN p.edit_count > 0 THEN ' (modifie ' || p.edit_count || ' fois)' ELSE '' END || '</span>
+            CASE WHEN p.edit_count > 0 THEN ' (modifié ' || p.edit_count || ' fois)' ELSE '' END || '</span>
             <div class="post-actions">
                 ' || CASE WHEN s.user_id IS NOT NULL THEN
                     '<button class="btn btn-sm" hx-post="/forum/api/react?post_id=' || p.id || '&type=like" hx-swap="outerHTML">
@@ -112,18 +112,18 @@ ORDER BY p.created_at;
 -- @query component=text
 SELECT CASE
     WHEN t.is_locked = 1 THEN
-        '<div class="alert alert-info">Ce sujet est verrouille, vous ne pouvez pas repondre.</div>'
+        '<div class="alert alert-info">Ce sujet est verrouillé, vous ne pouvez pas répondre.</div>'
     WHEN s.user_id IS NULL THEN
         '<div class="alert alert-info">
-            <a href="/forum/login">Connectez-vous</a> pour repondre a ce sujet.
+            <a href="/forum/login">Connectez-vous</a> pour répondre à ce sujet.
         </div>'
     ELSE
         '<div class="reply-form">
-            <h3>Repondre</h3>
+            <h3>Répondre</h3>
             <form action="/forum/api/reply" method="POST">
                 <input type="hidden" name="topic_id" value="' || t.id || '">
-                <textarea name="content" rows="6" placeholder="Votre reponse..." required></textarea>
-                <button type="submit" class="btn btn-primary">Publier la reponse</button>
+                <textarea name="content" rows="6" placeholder="Votre réponse..." required></textarea>
+                <button type="submit" class="btn btn-primary">Publier la réponse</button>
             </form>
         </div>'
 END as html

@@ -26,8 +26,8 @@ WHERE u.id = $id;
 -- @query component=table title="Derniers sujets"
 SELECT
     '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
-    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Categorie",
-    t.reply_count as "Reponses",
+    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Catégorie",
+    t.reply_count as "Réponses",
     time_ago(t.created_at) as "Date"
 FROM forum_topics t
 JOIN forum_categories c ON c.id = t.category_id

@@ -203,10 +203,11 @@ func UtilFuncs() []Func {
 					return sqlite.TextValue(""), nil
 				}
 
-				// Parse SQLite datetime format
+				// Parse SQLite datetime format (supports fractional seconds)
 				var t time.Time
 				var err error
 				formats := []string{
+					"2006-01-02 15:04:05.999999999",
 					"2006-01-02 15:04:05",
 					"2006-01-02T15:04:05Z",
 					"2006-01-02T15:04:05",
@@ -222,6 +223,8 @@ func UtilFuncs() []Func {
 					return sqlite.TextValue(dateStr), nil
 				}
 
+				// Ensure UTC for comparison (assumes DB timestamps are UTC)
+				t = t.UTC()
 				now := time.Now().UTC()
 				diff := now.Sub(t)
 

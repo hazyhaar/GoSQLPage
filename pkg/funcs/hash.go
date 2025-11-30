@@ -17,8 +17,9 @@ func HashFuncs() []Func {
 			NumArgs:       1,
 			Deterministic: true,
 			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
-				// Simple password hash: SHA256(salt + password)
-				// In production, use bcrypt - this is for demo purposes
+				// WARNING: This is for DEMO/TESTING purposes ONLY!
+				// SHA256 with a fixed salt is NOT secure for production.
+				// Use bcrypt, scrypt, or Argon2 with unique salts in production.
 				password := args[0].Text()
 				salt := "gosqlpage_forum_salt_2024"
 				sum := sha256.Sum256([]byte(salt + password))

@@ -12,7 +12,7 @@ SELECT '<div class="forum-header">
 SELECT CASE
     WHEN s.user_id IS NOT NULL THEN
         '<div class="user-bar">
-            <span>Connecte en tant que <strong>' || escape_html(u.display_name) || '</strong></span>
+            <span>Connecté en tant que <strong>' || escape_html(u.display_name) || '</strong></span>
             <a href="/forum/profile" class="btn btn-sm">Mon Profil</a>
             <a href="/forum/logout" class="btn btn-sm btn-outline">Deconnexion</a>
         </div>'
@@ -27,9 +27,9 @@ LEFT JOIN forum_sessions s ON s.id = $session_id AND s.expires_at > datetime('no
 LEFT JOIN forum_users u ON u.id = s.user_id;
 
 -- Categories list
--- @query component=table title="Categories"
+-- @query component=table title="Catégories"
 SELECT
-    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Categorie",
+    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Catégorie",
     escape_html(c.description) as "Description",
     (SELECT COUNT(*) FROM forum_topics t WHERE t.category_id = c.id AND t.deleted_at IS NULL) as "Sujets",
     (SELECT COUNT(*) FROM forum_posts p
@@ -50,14 +50,14 @@ WHERE c.parent_id IS NULL
 ORDER BY c.sort_order;
 
 -- Recent topics
--- @query component=table title="Discussions recentes"
+-- @query component=table title="Discussions récentes"
 SELECT
     '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
-    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Categorie",
+    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Catégorie",
     '<a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a>' as "Auteur",
-    t.reply_count as "Reponses",
+    t.reply_count as "Réponses",
     t.view_count as "Vues",
-    time_ago(COALESCE(t.last_reply_at, t.created_at)) as "Activite"
+    time_ago(COALESCE(t.last_reply_at, t.created_at)) as "Activité"
 FROM forum_topics t
 JOIN forum_categories c ON c.id = t.category_id
 JOIN forum_users u ON u.id = t.user_id
