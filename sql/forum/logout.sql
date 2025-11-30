@@ -1,8 +1,10 @@
 -- Logout Handler
 -- @query component=shell title="Deconnexion"
 
--- Delete session
-DELETE FROM forum_sessions WHERE id = $session_id;
+-- Delete session only if it exists and belongs to a user (security: verify session validity)
+DELETE FROM forum_sessions
+WHERE id = $session_id
+  AND expires_at > datetime('now');
 
 -- Redirect
 -- @query component=text

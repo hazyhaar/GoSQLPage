@@ -9,12 +9,12 @@ UPDATE forum_topics SET view_count = view_count + 1 WHERE id = $id;
 SELECT '<div class="topic-header">
     <nav class="breadcrumb">
         <a href="/forum">Forum</a> &raquo;
-        <a href="/forum/category?slug=' || c.slug || '">' || c.name || '</a> &raquo;
-        ' || t.title || '
+        <a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a> &raquo;
+        ' || escape_html(t.title) || '
     </nav>
-    <h1>' || t.title || '</h1>
+    <h1>' || escape_html(t.title) || '</h1>
     <div class="topic-meta">
-        Par <a href="/forum/user?id=' || u.id || '">' || u.display_name || '</a>
+        Par <a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a>
         &bull; ' || time_ago(t.created_at) || '
         &bull; ' || t.view_count || ' vues
         &bull; ' || t.reply_count || ' reponses
@@ -33,12 +33,12 @@ WHERE t.id = $id;
 SELECT '<article class="post post-original" id="post-0">
     <aside class="post-author">
         <img src="' || COALESCE(u.avatar_url, '/assets/default-avatar.png') || '" alt="" class="avatar">
-        <div class="author-name"><a href="/forum/user?id=' || u.id || '">' || u.display_name || '</a></div>
+        <div class="author-name"><a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a></div>
         <div class="author-role badge-' || u.role || '">' || u.role || '</div>
         <div class="author-stats">' || u.post_count || ' messages</div>
     </aside>
     <div class="post-content">
-        <div class="post-body">' || COALESCE(t.content_html, t.content) || '</div>
+        <div class="post-body">' || COALESCE(t.content_html, escape_html(t.content)) || '</div>
         <footer class="post-footer">
             <span class="post-date">' || time_ago(t.created_at) || '</span>
             <div class="post-actions">
@@ -67,7 +67,7 @@ WHERE t.id = $id;
 SELECT '<article class="post' || CASE WHEN p.is_solution THEN ' post-solution' ELSE '' END || '" id="post-' || p.id || '">
     <aside class="post-author">
         <img src="' || COALESCE(u.avatar_url, '/assets/default-avatar.png') || '" alt="" class="avatar">
-        <div class="author-name"><a href="/forum/user?id=' || u.id || '">' || u.display_name || '</a></div>
+        <div class="author-name"><a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a></div>
         <div class="author-role badge-' || u.role || '">' || u.role || '</div>
         <div class="author-stats">' || u.post_count || ' messages</div>
     </aside>
@@ -75,10 +75,10 @@ SELECT '<article class="post' || CASE WHEN p.is_solution THEN ' post-solution' E
         ' || CASE WHEN p.is_solution THEN '<div class="solution-badge">Solution acceptee</div>' ELSE '' END || '
         ' || CASE WHEN p.parent_id IS NOT NULL THEN
             '<blockquote class="quote">En reponse a ' ||
-            (SELECT display_name FROM forum_users WHERE id = (SELECT user_id FROM forum_posts WHERE id = p.parent_id)) ||
+            escape_html((SELECT display_name FROM forum_users WHERE id = (SELECT user_id FROM forum_posts WHERE id = p.parent_id))) ||
             '</blockquote>'
         ELSE '' END || '
-        <div class="post-body">' || COALESCE(p.content_html, p.content) || '</div>
+        <div class="post-body">' || COALESCE(p.content_html, escape_html(p.content)) || '</div>
         <footer class="post-footer">
             <span class="post-date">' || time_ago(p.created_at) ||
             CASE WHEN p.edit_count > 0 THEN ' (modifie ' || p.edit_count || ' fois)' ELSE '' END || '</span>

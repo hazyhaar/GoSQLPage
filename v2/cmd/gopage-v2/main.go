@@ -522,7 +522,12 @@ func (h *SQLPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.renderError(w, r, http.StatusBadRequest, "Invalid path")
 		return
 	}
-	absSqlDir, _ := filepath.Abs(h.sqlDir)
+	absSqlDir, err := filepath.Abs(h.sqlDir)
+	if err != nil {
+		h.logger.Error("failed to resolve sqlDir", "error", err)
+		h.renderError(w, r, http.StatusInternalServerError, "Internal error")
+		return
+	}
 	if !strings.HasPrefix(absPath, absSqlDir+string(filepath.Separator)) && absPath != absSqlDir {
 		h.logger.Warn("path traversal attempt", "path", path, "resolved", absPath)
 		h.renderError(w, r, http.StatusForbidden, "Access denied")

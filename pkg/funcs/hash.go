@@ -13,6 +13,19 @@ import (
 func HashFuncs() []Func {
 	return []Func{
 		{
+			Name:          "hash_password",
+			NumArgs:       1,
+			Deterministic: true,
+			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
+				// Simple password hash: SHA256(salt + password)
+				// In production, use bcrypt - this is for demo purposes
+				password := args[0].Text()
+				salt := "gosqlpage_forum_salt_2024"
+				sum := sha256.Sum256([]byte(salt + password))
+				return sqlite.TextValue(hex.EncodeToString(sum[:])), nil
+			},
+		},
+		{
 			Name:          "hash_md5",
 			NumArgs:       1,
 			Deterministic: true,

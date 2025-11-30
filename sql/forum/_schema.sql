@@ -183,5 +183,6 @@ INSERT OR IGNORE INTO forum_categories (id, name, slug, description, icon, sort_
     (5, 'Projets', 'projets', 'Partagez vos projets', 'rocket-launch', 5);
 
 -- Insert admin user (password: admin123 - change in production!)
+-- Hash = hash_password('admin123') = SHA256(salt + password)
 INSERT OR IGNORE INTO forum_users (id, username, email, password_hash, display_name, role) VALUES
-    (1, 'admin', 'admin@example.com', '$2a$10$rQEY0tHxLdGYFtAH4hJxheYs0XlXqR3SXplVh8gQJzKv8V8rlKYPi', 'Administrateur', 'admin');
+    (1, 'admin', 'admin@example.com', 'dad083d0123ad8bc781b1b9d0a629434950de39fb8e2ca6402dbeb74ac77ae98', 'Administrateur', 'admin');

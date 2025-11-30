@@ -193,6 +193,94 @@ func UtilFuncs() []Func {
 				return sqlite.FloatValue(f), nil
 			},
 		},
+		{
+			Name:          "time_ago",
+			NumArgs:       1, // datetime string (SQLite format: YYYY-MM-DD HH:MM:SS)
+			Deterministic: false,
+			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
+				dateStr := args[0].Text()
+				if dateStr == "" {
+					return sqlite.TextValue(""), nil
+				}
+
+				// Parse SQLite datetime format
+				var t time.Time
+				var err error
+				formats := []string{
+					"2006-01-02 15:04:05",
+					"2006-01-02T15:04:05Z",
+					"2006-01-02T15:04:05",
+					"2006-01-02",
+				}
+				for _, format := range formats {
+					t, err = time.Parse(format, dateStr)
+					if err == nil {
+						break
+					}
+				}
+				if err != nil {
+					return sqlite.TextValue(dateStr), nil
+				}
+
+				now := time.Now().UTC()
+				diff := now.Sub(t)
+
+				// Return human-readable relative time (French)
+				seconds := int64(diff.Seconds())
+				if seconds < 0 {
+					return sqlite.TextValue("dans le futur"), nil
+				}
+				if seconds < 60 {
+					return sqlite.TextValue("a l'instant"), nil
+				}
+
+				minutes := seconds / 60
+				if minutes < 60 {
+					if minutes == 1 {
+						return sqlite.TextValue("il y a 1 minute"), nil
+					}
+					return sqlite.TextValue(fmt.Sprintf("il y a %d minutes", minutes)), nil
+				}
+
+				hours := minutes / 60
+				if hours < 24 {
+					if hours == 1 {
+						return sqlite.TextValue("il y a 1 heure"), nil
+					}
+					return sqlite.TextValue(fmt.Sprintf("il y a %d heures", hours)), nil
+				}
+
+				days := hours / 24
+				if days < 7 {
+					if days == 1 {
+						return sqlite.TextValue("hier"), nil
+					}
+					return sqlite.TextValue(fmt.Sprintf("il y a %d jours", days)), nil
+				}
+
+				weeks := days / 7
+				if weeks < 4 {
+					if weeks == 1 {
+						return sqlite.TextValue("il y a 1 semaine"), nil
+					}
+					return sqlite.TextValue(fmt.Sprintf("il y a %d semaines", weeks)), nil
+				}
+
+				months := days / 30
+				if months < 12 {
+					if months == 1 {
+						return sqlite.TextValue("il y a 1 mois"), nil
+					}
+					return sqlite.TextValue(fmt.Sprintf("il y a %d mois", months)), nil
+				}
+
+				years := days / 365
+				if years == 1 {
+					return sqlite.TextValue("il y a 1 an"), nil
+				}
+				return sqlite.TextValue(fmt.Sprintf("il y a %d ans", years)), nil
+			},
+		},
 	}
 }
 

@@ -1,6 +1,7 @@
 package funcs
 
 import (
+	"html"
 	"regexp"
 	"strings"
 
@@ -98,6 +99,24 @@ func StringFuncs() []Func {
 					return sqlite.TextValue(""), nil
 				}
 				return sqlite.TextValue(parts[idx]), nil
+			},
+		},
+		{
+			Name:          "escape_html",
+			NumArgs:       1,
+			Deterministic: true,
+			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
+				s := args[0].Text()
+				return sqlite.TextValue(html.EscapeString(s)), nil
+			},
+		},
+		{
+			Name:          "unescape_html",
+			NumArgs:       1,
+			Deterministic: true,
+			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
+				s := args[0].Text()
+				return sqlite.TextValue(html.UnescapeString(s)), nil
 			},
 		},
 	}

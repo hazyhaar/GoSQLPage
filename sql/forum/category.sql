@@ -5,10 +5,10 @@
 -- @query component=text
 SELECT '<div class="category-header">
     <nav class="breadcrumb">
-        <a href="/forum">Forum</a> &raquo; ' || c.name || '
+        <a href="/forum">Forum</a> &raquo; ' || escape_html(c.name) || '
     </nav>
-    <h1>' || c.name || '</h1>
-    <p class="text-muted">' || COALESCE(c.description, '') || '</p>
+    <h1>' || escape_html(c.name) || '</h1>
+    <p class="text-muted">' || escape_html(COALESCE(c.description, '')) || '</p>
 </div>' as html
 FROM forum_categories c
 WHERE c.slug = $slug;
@@ -34,8 +34,8 @@ WHERE cat.slug = $slug;
 -- Pinned topics
 -- @query component=table title="Sujets epingles"
 SELECT
-    '<span class="badge badge-pinned">Epingle</span> <a href="/forum/topic?id=' || t.id || '">' || t.title || '</a>' as "Sujet",
-    '<a href="/forum/user?id=' || u.id || '">' || u.display_name || '</a>' as "Auteur",
+    '<span class="badge badge-pinned">Epingle</span> <a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
+    '<a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a>' as "Auteur",
     t.reply_count as "Reponses",
     t.view_count as "Vues",
     time_ago(COALESCE(t.last_reply_at, t.created_at)) as "Dernier msg"
@@ -50,8 +50,8 @@ ORDER BY t.created_at DESC;
 SELECT
     CASE WHEN t.is_locked THEN '<span class="badge badge-locked">Verrouille</span> ' ELSE '' END ||
     CASE WHEN t.is_solved THEN '<span class="badge badge-solved">Resolu</span> ' ELSE '' END ||
-    '<a href="/forum/topic?id=' || t.id || '">' || t.title || '</a>' as "Sujet",
-    '<a href="/forum/user?id=' || u.id || '">' || u.display_name || '</a>' as "Auteur",
+    '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
+    '<a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a>' as "Auteur",
     t.reply_count as "Reponses",
     t.view_count as "Vues",
     time_ago(COALESCE(t.last_reply_at, t.created_at)) as "Dernier msg"
