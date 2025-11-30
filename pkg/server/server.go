@@ -16,6 +16,7 @@ import (
 	"github.com/hazyhaar/gopage/pkg/render"
 	"github.com/hazyhaar/gopage/pkg/sse"
 	"zombiezen.com/go/sqlite"
+	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // Server is the GoPage HTTP server.
@@ -156,12 +157,35 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer release()
 
+	// For POST requests, wrap execution in a transaction to ensure writes persist
+	// zombiezen.com/go/sqlite requires explicit transactions for data to be committed
+	if r.Method == http.MethodPost {
+		if err := sqlitex.ExecuteTransient(conn, "BEGIN IMMEDIATE", nil); err != nil {
+			s.logger.Error("begin transaction", "error", err)
+			s.renderError(w, r, http.StatusInternalServerError, "Database error")
+			return
+		}
+	}
+
 	// Execute queries
 	results, err := s.executor.ExecuteFile(ctx, conn, file, params)
 	if err != nil {
+		// Rollback on error for POST requests
+		if r.Method == http.MethodPost {
+			_ = sqlitex.ExecuteTransient(conn, "ROLLBACK", nil)
+		}
 		s.logger.Error("execute error", "error", err)
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Commit transaction for POST requests
+	if r.Method == http.MethodPost {
+		if err := sqlitex.ExecuteTransient(conn, "COMMIT", nil); err != nil {
+			s.logger.Error("commit transaction", "error", err)
+			s.renderError(w, r, http.StatusInternalServerError, "Failed to save changes")
+			return
+		}
 	}
 
 	// Check for HTMX request
