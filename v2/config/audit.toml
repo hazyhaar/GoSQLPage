@@ -1,0 +1,25 @@
+# GoSQLPage v2.1 Audit Configuration
+
+[audit]
+# Store full content in audit logs
+store_content = false
+# Block types for which to store content (even if store_content is false)
+store_content_types = ["code", "definition", "procedure", "decision"]
+# Retention period in days
+retention_days = 90
+# Archive after N days
+archive_after_days = 30
+
+[logging]
+# Log merge operations
+log_merges = true
+# Log session operations
+log_sessions = true
+# Log permission checks
+log_permissions = false
+
+[alerts]
+# Alert on merge failures
+alert_merge_failures = true
+# Alert on conflict rate above threshold
+conflict_rate_threshold = 0.1
