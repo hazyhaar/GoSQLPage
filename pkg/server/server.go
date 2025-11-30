@@ -16,7 +16,6 @@ import (
 	"github.com/hazyhaar/gopage/pkg/render"
 	"github.com/hazyhaar/gopage/pkg/sse"
 	"zombiezen.com/go/sqlite"
-	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // Server is the GoPage HTTP server.
@@ -160,7 +159,15 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	// For POST requests, wrap execution in a transaction to ensure writes persist
 	// zombiezen.com/go/sqlite requires explicit transactions for data to be committed
 	if r.Method == http.MethodPost {
-		if err := sqlitex.ExecuteTransient(conn, "BEGIN IMMEDIATE", nil); err != nil {
+		beginStmt, _, err := conn.PrepareTransient("BEGIN IMMEDIATE")
+		if err != nil {
+			s.logger.Error("prepare begin", "error", err)
+			s.renderError(w, r, http.StatusInternalServerError, "Database error")
+			return
+		}
+		_, err = beginStmt.Step()
+		beginStmt.Finalize()
+		if err != nil {
 			s.logger.Error("begin transaction", "error", err)
 			s.renderError(w, r, http.StatusInternalServerError, "Database error")
 			return
@@ -172,7 +179,11 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Rollback on error for POST requests
 		if r.Method == http.MethodPost {
-			_ = sqlitex.ExecuteTransient(conn, "ROLLBACK", nil)
+			rollbackStmt, _, _ := conn.PrepareTransient("ROLLBACK")
+			if rollbackStmt != nil {
+				rollbackStmt.Step()
+				rollbackStmt.Finalize()
+			}
 		}
 		s.logger.Error("execute error", "error", err)
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
@@ -181,7 +192,15 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 
 	// Commit transaction for POST requests
 	if r.Method == http.MethodPost {
-		if err := sqlitex.ExecuteTransient(conn, "COMMIT", nil); err != nil {
+		commitStmt, _, err := conn.PrepareTransient("COMMIT")
+		if err != nil {
+			s.logger.Error("prepare commit", "error", err)
+			s.renderError(w, r, http.StatusInternalServerError, "Failed to save changes")
+			return
+		}
+		_, err = commitStmt.Step()
+		commitStmt.Finalize()
+		if err != nil {
 			s.logger.Error("commit transaction", "error", err)
 			s.renderError(w, r, http.StatusInternalServerError, "Failed to save changes")
 			return

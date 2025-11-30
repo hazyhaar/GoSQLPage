@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"zombiezen.com/go/sqlite"
-	"zombiezen.com/go/sqlite/sqlitex"
 )
 
 // Result represents the result of a query execution.
@@ -85,12 +84,8 @@ func (e *Executor) Execute(ctx context.Context, conn *sqlite.Conn, query Query, 
 			result.Rows = append(result.Rows, row)
 		}
 	} else {
-		// Execute non-SELECT query using sqlitex.ExecuteTransient
-		// This properly integrates with any active transaction
-		stmt.Finalize() // Finalize the prepared statement first
-		err := sqlitex.ExecuteTransient(conn, sql, &sqlitex.ExecOptions{
-			Named: convertParamsToNamed(params),
-		})
+		// Execute non-SELECT query (INSERT/UPDATE/DELETE)
+		_, err := stmt.Step()
 		if err != nil {
 			return nil, fmt.Errorf("exec: %w", err)
 		}
@@ -117,16 +112,6 @@ func (e *Executor) ExecuteFile(ctx context.Context, conn *sqlite.Conn, file *Fil
 func normalizeParams(sql string) string {
 	re := regexp.MustCompile(`\$(\w+)`)
 	return re.ReplaceAllString(sql, ":$1")
-}
-
-// convertParamsToNamed converts Params to map[string]interface{} for sqlitex.
-func convertParamsToNamed(params Params) map[string]interface{} {
-	named := make(map[string]interface{}, len(params))
-	for k, v := range params {
-		// sqlitex expects :name format
-		named[":"+k] = v
-	}
-	return named
 }
 
 // bindParams binds parameters to a prepared statement.
