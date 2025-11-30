@@ -219,14 +219,14 @@ curl http://localhost:8080/api/admin/audit
 - [x] Types de blocs sémantiques
 - [x] Relations typées
 - [x] Recherche FTS
-- [ ] Interface résolution conflits
+- [x] Interface résolution conflits
 - [x] API complète
-- [ ] Cache pages
+- [x] Cache pages avec invalidation
 
 ### Phase 4: Avancé
 - [ ] Multi-tenant
-- [ ] Intégration bot/LLM
+- [x] Intégration bot/LLM (MockProvider + worker)
 - [ ] Vecteurs pour RAG
-- [ ] Backup automatisé
-- [ ] Métriques Prometheus
+- [x] Backup automatisé
+- [x] Métriques Prometheus
 - [ ] Documentation auto-générée

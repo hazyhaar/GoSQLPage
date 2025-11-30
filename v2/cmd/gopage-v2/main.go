@@ -22,8 +22,12 @@ import (
 	"github.com/hazyhaar/gopage/pkg/render"
 	"github.com/hazyhaar/gopage/v2/pkg/api"
 	"github.com/hazyhaar/gopage/v2/pkg/audit"
+	"github.com/hazyhaar/gopage/v2/pkg/backup"
+	"github.com/hazyhaar/gopage/v2/pkg/bot"
+	"github.com/hazyhaar/gopage/v2/pkg/cache"
 	"github.com/hazyhaar/gopage/v2/pkg/gc"
 	"github.com/hazyhaar/gopage/v2/pkg/merger"
+	"github.com/hazyhaar/gopage/v2/pkg/metrics"
 	"github.com/hazyhaar/gopage/v2/pkg/session"
 	_ "modernc.org/sqlite"
 )
@@ -43,13 +47,18 @@ var auditSchema string
 func main() {
 	// Parse flags
 	var (
-		dataDir    = flag.String("data", "./v2/data", "Data directory")
+		dataDir     = flag.String("data", "./v2/data", "Data directory")
 		sessionsDir = flag.String("sessions", "./v2/sessions", "Sessions directory")
-		queueDir   = flag.String("queue", "./v2/queue", "Queue directory")
-		sqlDir     = flag.String("sql", "./sql", "SQL pages directory")
-		port       = flag.String("port", "8080", "HTTP port")
-		debug      = flag.Bool("debug", false, "Enable debug logging")
-		initDB     = flag.Bool("init", false, "Initialize databases if they don't exist")
+		queueDir    = flag.String("queue", "./v2/queue", "Queue directory")
+		cacheDir    = flag.String("cache", "./v2/cache/pages", "Page cache directory")
+		backupDir   = flag.String("backup", "./v2/backup", "Backup directory")
+		sqlDir      = flag.String("sql", "./sql", "SQL pages directory")
+		port        = flag.String("port", "8080", "HTTP port")
+		metricsPort = flag.String("metrics-port", "9090", "Prometheus metrics port (0 to disable)")
+		debug       = flag.Bool("debug", false, "Enable debug logging")
+		initDB      = flag.Bool("init", false, "Initialize databases if they don't exist")
+		enableCache = flag.Bool("cache-enabled", true, "Enable page caching")
+		enableBot   = flag.Bool("bot-enabled", false, "Enable bot worker")
 	)
 	flag.Parse()
 
@@ -167,6 +176,70 @@ func main() {
 	defer auditLogger.Close()
 	logger.Info("audit logger created")
 
+	// Create page cache
+	pageCache, err := cache.New(cache.Config{
+		Dir:       *cacheDir,
+		MaxSizeMB: 100,
+		TTLHours:  24,
+		Enabled:   *enableCache,
+		Logger:    logger,
+	})
+	if err != nil {
+		logger.Error("failed to create page cache", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("page cache created", "enabled", *enableCache)
+
+	// Create backup manager
+	backupMgr, err := backup.New(backup.Config{
+		BackupDir:     *backupDir,
+		Databases: []backup.DatabaseConfig{
+			{Name: "content", Path: contentDBPath},
+			{Name: "schema", Path: schemaDBPath},
+			{Name: "users", Path: usersDBPath},
+			{Name: "audit", Path: auditDBPath},
+		},
+		IntervalHours: 24,
+		RetentionDays: 30,
+		MaxBackups:    10,
+		Logger:        logger,
+	})
+	if err != nil {
+		logger.Error("failed to create backup manager", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("backup manager created")
+
+	// Create metrics registry
+	metricsRegistry := metrics.NewRegistry()
+	requestMetrics := metrics.NewRequestMetrics(metricsRegistry)
+	sessionMetrics := metrics.NewSessionMetrics(metricsRegistry)
+	mergerMetrics := metrics.NewMergerMetrics(metricsRegistry)
+	cacheMetrics := metrics.NewCacheMetrics(metricsRegistry)
+	_ = requestMetrics // Will be used in middleware
+	_ = sessionMetrics
+	_ = mergerMetrics
+	_ = cacheMetrics
+	logger.Info("metrics registry created")
+
+	// Create bot worker (optional)
+	var botWorker *bot.Worker
+	if *enableBot {
+		botWorker, err = bot.NewWorker(bot.WorkerConfig{
+			ContentDBPath:  contentDBPath,
+			SessionManager: sessionMgr,
+			Provider:       &bot.MockProvider{}, // Replace with real provider
+			BotUserID:      "bot_system",
+			PollIntervalMS: 1000,
+			Logger:         logger,
+		})
+		if err != nil {
+			logger.Warn("failed to create bot worker", "error", err)
+		} else {
+			logger.Info("bot worker created")
+		}
+	}
+
 	// Create API handler
 	apiHandler, err := api.New(api.Config{
 		SessionManager: sessionMgr,
@@ -219,6 +292,34 @@ func main() {
 	// Health check
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK - GoSQLPage v2.1"))
+	})
+
+	// Prometheus metrics endpoint
+	if *metricsPort != "0" {
+		router.Handle("/metrics", metricsRegistry.Handler())
+	}
+
+	// Cache stats endpoint
+	router.Get("/api/cache/stats", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		stats := pageCache.GetStats()
+		fmt.Fprintf(w, `{"enabled":%v,"entries":%d,"size_mb":%.2f,"hit_ratio":%.2f}`,
+			stats.Enabled, stats.Entries, stats.SizeMB, stats.HitRatio)
+	})
+
+	// Backup endpoints
+	router.Get("/api/backup/list", func(w http.ResponseWriter, r *http.Request) {
+		backups, err := backupMgr.ListBackups()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"backups":%d}`, len(backups))
+	})
+	router.Post("/api/backup/now", func(w http.ResponseWriter, r *http.Request) {
+		go backupMgr.RunNow(context.Background())
+		w.Write([]byte(`{"status":"backup_started"}`))
 	})
 
 	// Placeholder for SQL pages (to be integrated with existing engine)
@@ -278,6 +379,16 @@ func main() {
 	// Start GC daemon
 	go gcDaemon.Start(ctx)
 	logger.Info("GC daemon started")
+
+	// Start backup manager
+	go backupMgr.Start(ctx)
+	logger.Info("backup manager started")
+
+	// Start bot worker if enabled
+	if botWorker != nil {
+		go botWorker.Start(ctx)
+		logger.Info("bot worker started")
+	}
 
 	// Handle signals
 	go func() {
