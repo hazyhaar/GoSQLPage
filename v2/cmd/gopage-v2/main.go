@@ -12,14 +12,20 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/hazyhaar/gopage/internal/templates"
+	"github.com/hazyhaar/gopage/pkg/db"
+	"github.com/hazyhaar/gopage/pkg/engine"
+	"github.com/hazyhaar/gopage/pkg/funcs"
 	"github.com/hazyhaar/gopage/pkg/render"
+	"github.com/hazyhaar/gopage/pkg/sse"
 	"github.com/hazyhaar/gopage/v2/pkg/api"
+	"zombiezen.com/go/sqlite"
 	"github.com/hazyhaar/gopage/v2/pkg/audit"
 	"github.com/hazyhaar/gopage/v2/pkg/backup"
 	"github.com/hazyhaar/gopage/v2/pkg/bot"
@@ -262,6 +268,38 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Open content.db with v1 db package for SQL page rendering
+	// (v1 uses zombiezen.com/go/sqlite, v2 uses modernc.org/sqlite)
+	sqlPageDB, err := db.Open(db.Config{
+		Path:        contentPath,
+		ReaderCount: 4,
+	})
+	if err != nil {
+		logger.Error("failed to open content.db for SQL pages", "error", err)
+		os.Exit(1)
+	}
+	defer sqlPageDB.Close()
+
+	// Register custom SQL functions
+	funcRegistry := funcs.New()
+	if err := sqlPageDB.SetConnInit(funcRegistry.Apply); err != nil {
+		logger.Error("failed to register SQL functions", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("SQL page engine ready", "sql_dir", *sqlDir)
+
+	// Create SQL page handler
+	sqlParser := engine.NewParser()
+	sqlExecutor := engine.NewExecutor()
+	sqlPageHandler := &SQLPageHandler{
+		db:       sqlPageDB,
+		parser:   sqlParser,
+		executor: sqlExecutor,
+		renderer: renderer,
+		sqlDir:   *sqlDir,
+		logger:   logger,
+	}
+
 	// Create router
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
@@ -309,51 +347,13 @@ func main() {
 		w.Write([]byte(`{"status":"backup_started"}`))
 	})
 
-	// Placeholder for SQL pages (to be integrated with existing engine)
-	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-		// For now, render a simple page showing v2.1 is running
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, `<!DOCTYPE html>
-<html>
-<head>
-    <title>GoSQLPage v2.1</title>
-    <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-        h1 { color: #333; }
-        .status { background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
-        .endpoints { background: #f5f5f5; padding: 20px; border-radius: 8px; }
-        .endpoints h3 { margin-top: 0; }
-        ul { line-height: 2; }
-    </style>
-</head>
-<body>
-    <h1>GoSQLPage v2.1</h1>
-    <div class="status">
-        <strong>Status:</strong> Running<br>
-        <strong>Architecture:</strong> Block-based with isolated sessions
-    </div>
+	// SSE endpoint for real-time events
+	sseHub := sse.NewHub(logger)
+	sse.SetGlobalHub(sseHub)
+	router.Get("/events", sseHub.ServeHTTP)
 
-    <div class="endpoints">
-        <h3>API Endpoints</h3>
-        <ul>
-            <li><code>GET /api/health</code> - Health check</li>
-            <li><code>GET /api/blocks</code> - List blocks</li>
-            <li><code>GET /api/blocks/{id}</code> - Get block</li>
-            <li><code>GET /api/search?q=...</code> - Search blocks</li>
-            <li><code>POST /api/session</code> - Create editing session</li>
-            <li><code>POST /api/session/blocks</code> - Add block to session</li>
-            <li><code>POST /api/session/submit</code> - Submit for merge</li>
-            <li><code>GET /api/admin/schema</code> - Get block types</li>
-        </ul>
-    </div>
-
-    <p>SQL pages from <code>%s</code> will be served from this endpoint once integrated.</p>
-</body>
-</html>`, *sqlDir)
-	})
-
-	_ = renderer // Will be used when integrating SQL pages
+	// SQL pages - catch all (GET and POST)
+	router.HandleFunc("/*", sqlPageHandler.ServeHTTP)
 
 	// Context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -490,4 +490,128 @@ func initDB(path, schema string, logger *slog.Logger) error {
 
 	logger.Info("database created", "path", path)
 	return nil
+}
+
+// SQLPageHandler handles SQL page requests using the v1 engine.
+type SQLPageHandler struct {
+	db       *db.DB
+	parser   *engine.Parser
+	executor *engine.Executor
+	renderer *render.Renderer
+	sqlDir   string
+	logger   *slog.Logger
+}
+
+// ServeHTTP handles SQL page requests.
+func (h *SQLPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	path := r.URL.Path
+
+	// Normalize path
+	if path == "/" {
+		path = "/index"
+	}
+	path = strings.TrimSuffix(path, "/")
+	path = strings.TrimSuffix(path, ".sql")
+
+	// Find SQL file
+	sqlPath := filepath.Join(h.sqlDir, path+".sql")
+	if _, err := os.Stat(sqlPath); os.IsNotExist(err) {
+		h.renderError(w, r, http.StatusNotFound, "Page not found: "+path)
+		return
+	}
+
+	// Parse SQL file
+	file, err := h.parser.ParseFile(sqlPath)
+	if err != nil {
+		h.logger.Error("parse error", "path", sqlPath, "error", err)
+		h.renderError(w, r, http.StatusInternalServerError, "Failed to parse SQL file")
+		return
+	}
+
+	// Build params from URL query and form
+	params := make(engine.Params)
+	for key, values := range r.URL.Query() {
+		if len(values) > 0 {
+			params[key] = values[0]
+		}
+	}
+
+	// Parse form for POST requests
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err == nil {
+			for key, values := range r.Form {
+				if len(values) > 0 {
+					params[key] = values[0]
+				}
+			}
+		}
+	}
+
+	// Get appropriate connection
+	var sqlConn *sqlite.Conn
+	var release func()
+
+	if r.Method == http.MethodPost {
+		c, rel, err := h.db.Writer(ctx)
+		if err != nil {
+			h.logger.Error("get writer", "error", err)
+			h.renderError(w, r, http.StatusServiceUnavailable, "Database unavailable")
+			return
+		}
+		sqlConn = c
+		release = rel
+	} else {
+		c, rel, err := h.db.Reader(ctx)
+		if err != nil {
+			h.logger.Error("get reader", "error", err)
+			h.renderError(w, r, http.StatusServiceUnavailable, "Database unavailable")
+			return
+		}
+		sqlConn = c
+		release = rel
+	}
+	defer release()
+
+	// Execute all queries
+	var results []*engine.Result
+	for _, query := range file.Queries {
+		result, err := h.executor.Execute(ctx, sqlConn, query, params)
+		if err != nil {
+			h.logger.Error("execute error", "query", query.Name, "error", err)
+			h.renderError(w, r, http.StatusInternalServerError, "Query failed: "+err.Error())
+			return
+		}
+		results = append(results, result)
+	}
+
+	// Render page
+	isHTMX := r.Header.Get("HX-Request") == "true"
+	pageData := &render.PageData{
+		Title:       file.Title,
+		Results:     results,
+		CurrentPath: r.URL.Path,
+		IsHTMX:      isHTMX,
+	}
+
+	if err := h.renderer.RenderPage(w, pageData); err != nil {
+		h.logger.Error("render error", "error", err)
+		// Don't try to render error page if rendering already failed
+		http.Error(w, "Render failed", http.StatusInternalServerError)
+	}
+}
+
+// renderError renders an error page.
+func (h *SQLPageHandler) renderError(w http.ResponseWriter, r *http.Request, status int, message string) {
+	w.WriteHeader(status)
+	isHTMX := r.Header.Get("HX-Request") == "true"
+	pageData := &render.PageData{
+		Title:       "Error",
+		CurrentPath: r.URL.Path,
+		IsHTMX:      isHTMX,
+		Error:       fmt.Errorf(message),
+	}
+	if err := h.renderer.RenderError(w, pageData); err != nil {
+		http.Error(w, message, status)
+	}
 }
