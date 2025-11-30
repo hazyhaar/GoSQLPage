@@ -10,13 +10,16 @@ SELECT CASE
     WHEN u.role = 'banned' THEN
         '<div class="alert alert-error">Ce compte a ete suspendu</div>
          <script>setTimeout(() => window.location.href = "/forum/login", 2000);</script>'
-    ELSE
+    WHEN new_session.id IS NOT NULL THEN
         '<div class="alert alert-success">Connexion reussie ! Redirection...</div>
          <script>
-            document.cookie = "session_id=" || new_session.id || "; path=/; max-age=" ||
-                CASE WHEN $remember = 'on' THEN '2592000' ELSE '86400' END;
+            document.cookie = "session_id=' || new_session.id || '; path=/; max-age=' ||
+                CASE WHEN $remember = 'on' THEN '2592000' ELSE '86400' END || '";
             window.location.href = "/forum";
          </script>'
+    ELSE
+        '<div class="alert alert-error">Erreur lors de la connexion</div>
+         <script>setTimeout(() => window.location.href = "/forum/login", 2000);</script>'
 END as html
 FROM (SELECT 1) dummy
 LEFT JOIN forum_users u ON (u.username = $username OR u.email = $username)
