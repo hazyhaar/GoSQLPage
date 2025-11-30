@@ -12,7 +12,7 @@ SELECT '<div class="forum-header">
 SELECT CASE
     WHEN s.user_id IS NOT NULL THEN
         '<div class="user-bar">
-            <span>Connecte en tant que <strong>' || u.display_name || '</strong></span>
+            <span>Connecte en tant que <strong>' || escape_html(u.display_name) || '</strong></span>
             <a href="/forum/profile" class="btn btn-sm">Mon Profil</a>
             <a href="/forum/logout" class="btn btn-sm btn-outline">Deconnexion</a>
         </div>'
@@ -29,15 +29,15 @@ LEFT JOIN forum_users u ON u.id = s.user_id;
 -- Categories list
 -- @query component=table title="Categories"
 SELECT
-    '<a href="/forum/category?slug=' || c.slug || '">' || c.name || '</a>' as "Categorie",
-    c.description as "Description",
+    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Categorie",
+    escape_html(c.description) as "Description",
     (SELECT COUNT(*) FROM forum_topics t WHERE t.category_id = c.id AND t.deleted_at IS NULL) as "Sujets",
     (SELECT COUNT(*) FROM forum_posts p
      JOIN forum_topics t ON p.topic_id = t.id
      WHERE t.category_id = c.id AND p.deleted_at IS NULL) as "Messages",
     COALESCE(
-        (SELECT '<a href="/forum/topic?id=' || t.id || '">' || t.title || '</a><br><small>' ||
-                time_ago(t.last_reply_at) || ' par ' || u.display_name || '</small>'
+        (SELECT '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a><br><small>' ||
+                time_ago(t.last_reply_at) || ' par ' || escape_html(u.display_name) || '</small>'
          FROM forum_topics t
          LEFT JOIN forum_users u ON u.id = t.last_reply_by
          WHERE t.category_id = c.id AND t.deleted_at IS NULL
@@ -52,9 +52,9 @@ ORDER BY c.sort_order;
 -- Recent topics
 -- @query component=table title="Discussions recentes"
 SELECT
-    '<a href="/forum/topic?id=' || t.id || '">' || t.title || '</a>' as "Sujet",
-    '<a href="/forum/category?slug=' || c.slug || '">' || c.name || '</a>' as "Categorie",
-    '<a href="/forum/user?id=' || u.id || '">' || u.display_name || '</a>' as "Auteur",
+    '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
+    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Categorie",
+    '<a href="/forum/user?id=' || u.id || '">' || escape_html(u.display_name) || '</a>' as "Auteur",
     t.reply_count as "Reponses",
     t.view_count as "Vues",
     time_ago(COALESCE(t.last_reply_at, t.created_at)) as "Activite"
@@ -71,4 +71,4 @@ SELECT
     (SELECT COUNT(*) FROM forum_users) as "Membres",
     (SELECT COUNT(*) FROM forum_topics WHERE deleted_at IS NULL) as "Sujets",
     (SELECT COUNT(*) FROM forum_posts WHERE deleted_at IS NULL) as "Messages",
-    (SELECT display_name FROM forum_users ORDER BY created_at DESC LIMIT 1) as "Dernier inscrit";
+    escape_html((SELECT display_name FROM forum_users ORDER BY created_at DESC LIMIT 1)) as "Dernier inscrit";

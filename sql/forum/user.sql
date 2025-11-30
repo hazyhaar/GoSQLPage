@@ -6,14 +6,14 @@
 SELECT '<div class="profile-header">
     <img src="' || COALESCE(u.avatar_url, '/assets/default-avatar.png') || '" alt="" class="avatar-large">
     <div class="profile-info">
-        <h1>' || u.display_name || '</h1>
+        <h1>' || escape_html(u.display_name) || '</h1>
         <div class="profile-meta">
             <span class="badge badge-' || u.role || '">' || u.role || '</span>
             &bull; Membre depuis ' || strftime('%d/%m/%Y', u.created_at) || '
             &bull; ' || u.post_count || ' messages
             &bull; ' || u.reputation || ' reputation
         </div>
-        ' || CASE WHEN u.bio IS NOT NULL THEN '<p class="bio">' || u.bio || '</p>' ELSE '' END || '
+        ' || CASE WHEN u.bio IS NOT NULL THEN '<p class="bio">' || escape_html(u.bio) || '</p>' ELSE '' END || '
         ' || CASE WHEN u.last_seen_at IS NOT NULL THEN
             '<div class="last-seen">Vu ' || time_ago(u.last_seen_at) || '</div>'
         ELSE '' END || '
@@ -25,8 +25,8 @@ WHERE u.id = $id;
 -- User's recent topics
 -- @query component=table title="Derniers sujets"
 SELECT
-    '<a href="/forum/topic?id=' || t.id || '">' || t.title || '</a>' as "Sujet",
-    '<a href="/forum/category?slug=' || c.slug || '">' || c.name || '</a>' as "Categorie",
+    '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Sujet",
+    '<a href="/forum/category?slug=' || c.slug || '">' || escape_html(c.name) || '</a>' as "Categorie",
     t.reply_count as "Reponses",
     time_ago(t.created_at) as "Date"
 FROM forum_topics t

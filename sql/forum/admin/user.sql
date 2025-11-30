@@ -10,21 +10,21 @@ SELECT CASE
         '<nav class="breadcrumb">
             <a href="/forum/admin">Admin</a> &raquo;
             <a href="/forum/admin/users">Utilisateurs</a> &raquo;
-            ' || u.display_name || '
+            ' || escape_html(u.display_name) || '
         </nav>
-        <h1>Gerer: ' || u.display_name || '</h1>'
+        <h1>Gerer: ' || escape_html(u.display_name) || '</h1>'
 END as html
 FROM forum_users u
 JOIN forum_sessions s ON s.id = $session_id AND s.expires_at > datetime('now')
 JOIN forum_users cu ON cu.id = s.user_id
 WHERE u.id = $id;
 
--- User info card
+-- User info card (only show to admins)
 -- @query component=card title="Informations"
 SELECT
     u.id as "ID",
     u.username as "Username",
-    u.display_name as "Nom affiche",
+    escape_html(u.display_name) as "Nom affiche",
     u.email as "Email",
     u.role as "Role actuel",
     u.post_count as "Messages",
@@ -32,7 +32,9 @@ SELECT
     u.created_at as "Inscrit le",
     COALESCE(u.last_seen_at, 'Jamais') as "Derniere visite"
 FROM forum_users u
-WHERE u.id = $id;
+JOIN forum_sessions s ON s.id = $session_id AND s.expires_at > datetime('now')
+JOIN forum_users cu ON cu.id = s.user_id
+WHERE u.id = $id AND cu.role = 'admin';
 
 -- Role change form
 -- @query component=form action="/forum/api/admin/change-role" method="POST" title="Changer le role"
@@ -75,20 +77,24 @@ SELECT '<div class="admin-actions">
     </form>
 </div>' as html;
 
--- Recent activity
+-- Recent activity (only show to admins)
 -- @query component=table title="Activite recente"
 SELECT
     'Sujet' as "Type",
-    '<a href="/forum/topic?id=' || t.id || '">' || t.title || '</a>' as "Contenu",
+    '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Contenu",
     time_ago(t.created_at) as "Date"
 FROM forum_topics t
-WHERE t.user_id = $id
+JOIN forum_sessions s ON s.id = $session_id AND s.expires_at > datetime('now')
+JOIN forum_users cu ON cu.id = s.user_id
+WHERE t.user_id = $id AND cu.role = 'admin'
 UNION ALL
 SELECT
     'Message' as "Type",
-    '<a href="/forum/topic?id=' || p.topic_id || '#post-' || p.id || '">' || SUBSTR(p.content, 1, 50) || '...</a>' as "Contenu",
+    '<a href="/forum/topic?id=' || p.topic_id || '#post-' || p.id || '">' || escape_html(SUBSTR(p.content, 1, 50)) || '...</a>' as "Contenu",
     time_ago(p.created_at) as "Date"
 FROM forum_posts p
-WHERE p.user_id = $id
+JOIN forum_sessions s ON s.id = $session_id AND s.expires_at > datetime('now')
+JOIN forum_users cu ON cu.id = s.user_id
+WHERE p.user_id = $id AND cu.role = 'admin'
 ORDER BY 3 DESC
 LIMIT 20;
