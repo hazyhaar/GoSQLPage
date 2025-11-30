@@ -125,7 +125,7 @@ func (r *Renderer) RenderPage(w io.Writer, data *PageData) error {
 		Content:  template.HTML(content.String()),
 	}
 
-	return r.templates.ExecuteTemplate(w, "layouts/base.html", layoutData)
+	return r.templates.ExecuteTemplate(w, "base.html", layoutData)
 }
 
 // RenderError renders an error page.
@@ -150,7 +150,7 @@ func (r *Renderer) RenderError(w io.Writer, data *PageData) error {
 		Content:  template.HTML(content.String()),
 	}
 
-	return r.templates.ExecuteTemplate(w, "layouts/base.html", layoutData)
+	return r.templates.ExecuteTemplate(w, "base.html", layoutData)
 }
 
 // templateFuncs provides helper functions for templates.

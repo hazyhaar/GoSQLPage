@@ -15,7 +15,7 @@ type TextComponent struct {
 func (c *TextComponent) Name() string { return "text" }
 
 func (c *TextComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "components/text.html", struct {
+	return c.tmpl.ExecuteTemplate(w, "text.html", struct {
 		Result  *engine.Result
 		Options map[string]string
 	}{
@@ -32,7 +32,7 @@ type TableComponent struct {
 func (c *TableComponent) Name() string { return "table" }
 
 func (c *TableComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "components/table.html", struct {
+	return c.tmpl.ExecuteTemplate(w, "table.html", struct {
 		Result  *engine.Result
 		Options map[string]string
 	}{
@@ -49,7 +49,7 @@ type ListComponent struct {
 func (c *ListComponent) Name() string { return "list" }
 
 func (c *ListComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "components/list.html", struct {
+	return c.tmpl.ExecuteTemplate(w, "list.html", struct {
 		Result  *engine.Result
 		Options map[string]string
 	}{
@@ -66,7 +66,7 @@ type CardComponent struct {
 func (c *CardComponent) Name() string { return "card" }
 
 func (c *CardComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "components/card.html", struct {
+	return c.tmpl.ExecuteTemplate(w, "card.html", struct {
 		Result  *engine.Result
 		Options map[string]string
 	}{
@@ -100,7 +100,7 @@ type FormComponent struct {
 func (c *FormComponent) Name() string { return "form" }
 
 func (c *FormComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "components/form.html", struct {
+	return c.tmpl.ExecuteTemplate(w, "form.html", struct {
 		Result  *engine.Result
 		Options map[string]string
 	}{
@@ -117,7 +117,7 @@ type ErrorComponent struct {
 func (c *ErrorComponent) Name() string { return "error" }
 
 func (c *ErrorComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "system/error.html", data)
+	return c.tmpl.ExecuteTemplate(w, "error.html", data)
 }
 
 // SearchComponent renders a search form.
@@ -128,7 +128,7 @@ type SearchComponent struct {
 func (c *SearchComponent) Name() string { return "search" }
 
 func (c *SearchComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "components/search.html", struct {
+	return c.tmpl.ExecuteTemplate(w, "search.html", struct {
 		Result  *engine.Result
 		Options map[string]string
 	}{
@@ -145,7 +145,7 @@ type AlertComponent struct {
 func (c *AlertComponent) Name() string { return "alert" }
 
 func (c *AlertComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "components/alert.html", struct {
+	return c.tmpl.ExecuteTemplate(w, "alert.html", struct {
 		Result  *engine.Result
 		Options map[string]string
 	}{
@@ -162,7 +162,7 @@ type SSEComponent struct {
 func (c *SSEComponent) Name() string { return "sse" }
 
 func (c *SSEComponent) Render(w io.Writer, result *engine.Result, data *PageData) error {
-	return c.tmpl.ExecuteTemplate(w, "components/sse.html", struct {
+	return c.tmpl.ExecuteTemplate(w, "sse.html", struct {
 		Result  *engine.Result
 		Options map[string]string
 	}{

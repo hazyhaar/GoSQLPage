@@ -514,10 +514,29 @@ func (h *SQLPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path = strings.TrimSuffix(path, "/")
 	path = strings.TrimSuffix(path, ".sql")
 
-	// Find SQL file
-	sqlPath := filepath.Join(h.sqlDir, path+".sql")
-	if _, err := os.Stat(sqlPath); os.IsNotExist(err) {
-		h.renderError(w, r, http.StatusNotFound, "Page not found: "+path)
+	// Security: Clean path and validate it's within sqlDir
+	cleanPath := filepath.Clean(path)
+	sqlPath := filepath.Join(h.sqlDir, cleanPath+".sql")
+	absPath, err := filepath.Abs(sqlPath)
+	if err != nil {
+		h.renderError(w, r, http.StatusBadRequest, "Invalid path")
+		return
+	}
+	absSqlDir, _ := filepath.Abs(h.sqlDir)
+	if !strings.HasPrefix(absPath, absSqlDir+string(filepath.Separator)) && absPath != absSqlDir {
+		h.logger.Warn("path traversal attempt", "path", path, "resolved", absPath)
+		h.renderError(w, r, http.StatusForbidden, "Access denied")
+		return
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(sqlPath); err != nil {
+		if os.IsNotExist(err) {
+			h.renderError(w, r, http.StatusNotFound, "Page not found")
+		} else {
+			h.logger.Error("stat error", "path", sqlPath, "error", err)
+			h.renderError(w, r, http.StatusInternalServerError, "Internal error")
+		}
 		return
 	}
 
@@ -539,11 +558,13 @@ func (h *SQLPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Parse form for POST requests
 	if r.Method == http.MethodPost {
-		if err := r.ParseForm(); err == nil {
-			for key, values := range r.Form {
-				if len(values) > 0 {
-					params[key] = values[0]
-				}
+		if err := r.ParseForm(); err != nil {
+			h.logger.Warn("parse form error", "error", err)
+			// Continue anyway - form might be empty or malformed but we still process
+		}
+		for key, values := range r.Form {
+			if len(values) > 0 {
+				params[key] = values[0]
 			}
 		}
 	}
