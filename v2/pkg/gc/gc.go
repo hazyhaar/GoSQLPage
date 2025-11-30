@@ -5,7 +5,6 @@ package gc
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -17,33 +16,33 @@ import (
 
 // Config holds GC configuration.
 type Config struct {
-	SessionsDir      string
-	AuditDBPath      string
-	ContentDBPath    string
-	FailedDir        string
-	DoneDir          string
-	BackupDir        string
-	IntervalHours    int
-	AbandonedDays    int
-	MergedDays       int
-	FailedArchiveDays int
-	AuditRetentionDays int
+	SessionsDir           string
+	AuditDBPath           string
+	ContentDBPath         string
+	FailedDir             string
+	DoneDir               string
+	BackupDir             string
+	IntervalHours         int
+	AbandonedDays         int
+	MergedDays            int
+	FailedArchiveDays     int
+	AuditRetentionDays    int
 	AuditArchiveAfterDays int
-	VacuumThreshold  int
-	VacuumStartHour  int
-	VacuumEndHour    int
-	CacheExpireHours int
-	Logger           *slog.Logger
+	VacuumThreshold       int
+	VacuumStartHour       int
+	VacuumEndHour         int
+	CacheExpireHours      int
+	Logger                *slog.Logger
 }
 
 // GC is the garbage collector.
 type GC struct {
-	cfg       Config
-	running   bool
-	mu        sync.Mutex
-	stopCh    chan struct{}
-	logger    *slog.Logger
-	lastRun   time.Time
+	cfg     Config
+	running bool
+	mu      sync.Mutex
+	stopCh  chan struct{}
+	logger  *slog.Logger
+	lastRun time.Time
 
 	// Stats
 	sessionsCleanedTotal int64
@@ -384,11 +383,11 @@ func (g *GC) RunNow(ctx context.Context) {
 
 // Health returns the GC health status.
 type Health struct {
-	Status           string    `json:"status"`
-	LastRunAt        time.Time `json:"last_run_at"`
-	SessionsCleaned  int64     `json:"sessions_cleaned"`
-	AuditArchived    int64     `json:"audit_archived"`
-	NextRunAt        time.Time `json:"next_run_at"`
+	Status          string    `json:"status"`
+	LastRunAt       time.Time `json:"last_run_at"`
+	SessionsCleaned int64     `json:"sessions_cleaned"`
+	AuditArchived   int64     `json:"audit_archived"`
+	NextRunAt       time.Time `json:"next_run_at"`
 }
 
 // GetHealth returns the current health status.
