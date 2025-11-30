@@ -182,7 +182,8 @@ INSERT OR IGNORE INTO forum_categories (id, name, slug, description, icon, sort_
     (4, 'Tutoriels', 'tutoriels', 'Guides et tutoriels de la communaute', 'academic-cap', 4),
     (5, 'Projets', 'projets', 'Partagez vos projets', 'rocket-launch', 5);
 
--- Insert admin user (password: admin123 - change in production!)
--- Hash = hash_password('admin123') = SHA256(salt + password)
+-- Insert admin user - DEMO ONLY! DO NOT USE IN PRODUCTION!
+-- WARNING: SHA256 with fixed salt is NOT SECURE. Use bcrypt/Argon2 in production.
+-- Hash = SHA256('gosqlpage_forum_salt_2024' + 'admin123')
 INSERT OR IGNORE INTO forum_users (id, username, email, password_hash, display_name, role) VALUES
     (1, 'admin', 'admin@example.com', 'dad083d0123ad8bc781b1b9d0a629434950de39fb8e2ca6402dbeb74ac77ae98', 'Administrateur', 'admin');

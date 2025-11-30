@@ -1,5 +1,5 @@
 -- Admin User Management
--- @query component=shell title="Gerer l'utilisateur"
+-- @query component=shell title="Gérer l'utilisateur"
 
 -- Check admin access
 -- @query component=text
@@ -12,7 +12,7 @@ SELECT CASE
             <a href="/forum/admin/users">Utilisateurs</a> &raquo;
             ' || escape_html(u.display_name) || '
         </nav>
-        <h1>Gerer: ' || escape_html(u.display_name) || '</h1>'
+        <h1>Gérer : ' || escape_html(u.display_name) || '</h1>'
 END as html
 FROM forum_users u
 JOIN forum_sessions s ON s.id = $session_id AND s.expires_at > datetime('now')
@@ -24,20 +24,20 @@ WHERE u.id = $id;
 SELECT
     u.id as "ID",
     u.username as "Username",
-    escape_html(u.display_name) as "Nom affiche",
+    escape_html(u.display_name) as "Nom affiché",
     u.email as "Email",
-    u.role as "Role actuel",
+    u.role as "Rôle actuel",
     u.post_count as "Messages",
-    u.reputation as "Reputation",
+    u.reputation as "Réputation",
     u.created_at as "Inscrit le",
-    COALESCE(u.last_seen_at, 'Jamais') as "Derniere visite"
+    COALESCE(u.last_seen_at, 'Jamais') as "Dernière visite"
 FROM forum_users u
 JOIN forum_sessions s ON s.id = $session_id AND s.expires_at > datetime('now')
 JOIN forum_users cu ON cu.id = s.user_id
 WHERE u.id = $id AND cu.role = 'admin';
 
 -- Role change form
--- @query component=form action="/forum/api/admin/change-role" method="POST" title="Changer le role"
+-- @query component=form action="/forum/api/admin/change-role" method="POST" title="Changer le rôle"
 SELECT
     'hidden' as type,
     'user_id' as name,
@@ -47,8 +47,8 @@ SELECT
 UNION ALL SELECT
     'select' as type,
     'role' as name,
-    'Nouveau role' as label,
-    'member:Membre|moderator:Moderateur|admin:Administrateur|banned:Banni' as options,
+    'Nouveau rôle' as label,
+    'member:Membre|moderator:Modérateur|admin:Administrateur|banned:Banni' as options,
     1 as required
 UNION ALL SELECT
     'textarea' as type,
@@ -59,7 +59,7 @@ UNION ALL SELECT
 UNION ALL SELECT
     'submit' as type,
     'submit' as name,
-    'Changer le role' as label,
+    'Changer le rôle' as label,
     '' as placeholder,
     0 as required;
 
@@ -69,16 +69,16 @@ SELECT '<div class="admin-actions">
     <h3>Actions rapides</h3>
     <form action="/forum/api/admin/reset-password" method="POST" style="display:inline">
         <input type="hidden" name="user_id" value="' || $id || '">
-        <button type="submit" class="btn btn-warning">Reinitialiser mot de passe</button>
+        <button type="submit" class="btn btn-warning">Réinitialiser mot de passe</button>
     </form>
-    <form action="/forum/api/admin/delete-user" method="POST" style="display:inline" onsubmit="return confirm(''Supprimer definitivement cet utilisateur ?'')">
+    <form action="/forum/api/admin/delete-user" method="POST" style="display:inline" onsubmit="return confirm(''Supprimer définitivement cet utilisateur ?'')">
         <input type="hidden" name="user_id" value="' || $id || '">
         <button type="submit" class="btn btn-danger">Supprimer le compte</button>
     </form>
 </div>' as html;
 
 -- Recent activity (only show to admins)
--- @query component=table title="Activite recente"
+-- @query component=table title="Activité récente"
 SELECT
     'Sujet' as "Type",
     '<a href="/forum/topic?id=' || t.id || '">' || escape_html(t.title) || '</a>' as "Contenu",
