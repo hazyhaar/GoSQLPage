@@ -1,4 +1,4 @@
-# GoPage
+# GoSQLPage
 
 A SQL-driven web application server written in Go. Build web applications using SQL files with built-in components for tables, forms, lists, and more.
 
