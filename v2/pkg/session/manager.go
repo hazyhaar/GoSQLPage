@@ -4,7 +4,6 @@ package session
 import (
 	"context"
 	"database/sql"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -17,8 +16,84 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-//go:embed ../../../data/schema_session.sql
-var sessionSchema string
+// DefaultSessionSchema is the SQL schema for session databases.
+const DefaultSessionSchema = `
+-- Session metadata
+CREATE TABLE IF NOT EXISTS _session_meta (
+    session_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_type TEXT NOT NULL DEFAULT 'human',
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    last_activity TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    base_snapshot TEXT NOT NULL,
+    schema_version INTEGER NOT NULL,
+    schema_hash TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active'
+);
+
+-- Change journal
+CREATE TABLE IF NOT EXISTS _changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    operation TEXT NOT NULL,
+    block_id TEXT NOT NULL,
+    field TEXT,
+    before TEXT,
+    after TEXT,
+    merged INTEGER NOT NULL DEFAULT 0
+);
+
+-- Structural dependencies
+CREATE TABLE IF NOT EXISTS _structural_deps (
+    block_id TEXT PRIMARY KEY,
+    depends_on TEXT NOT NULL,
+    snapshot_hashes TEXT NOT NULL
+);
+
+-- Working copy of blocks
+CREATE TABLE IF NOT EXISTS blocks (
+    id TEXT PRIMARY KEY,
+    parent_id TEXT,
+    type TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    content_html TEXT,
+    position TEXT NOT NULL DEFAULT 'a',
+    hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    created_by TEXT NOT NULL,
+    published INTEGER NOT NULL DEFAULT 0,
+    deleted_at TEXT,
+    _dirty INTEGER NOT NULL DEFAULT 0,
+    _source TEXT NOT NULL DEFAULT 'new'
+);
+
+-- Working copy of refs
+CREATE TABLE IF NOT EXISTS refs (
+    from_id TEXT NOT NULL,
+    to_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    anchor TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    created_by TEXT NOT NULL,
+    _dirty INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (from_id, to_id, type)
+);
+
+-- Working copy of attrs
+CREATE TABLE IF NOT EXISTS attrs (
+    block_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    value TEXT NOT NULL,
+    _dirty INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (block_id, name)
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_session_blocks_dirty ON blocks(_dirty);
+CREATE INDEX IF NOT EXISTS idx_session_blocks_parent ON blocks(parent_id);
+CREATE INDEX IF NOT EXISTS idx_changes_block ON _changes(block_id);
+`
 
 // ManagerConfig holds configuration for the session manager.
 type ManagerConfig struct {
@@ -179,7 +254,7 @@ func (m *Manager) Create(ctx context.Context, userID, userType string) (*Session
 	defer db.Close()
 
 	// Initialize schema
-	if _, err := db.ExecContext(ctx, sessionSchema); err != nil {
+	if _, err := db.ExecContext(ctx, DefaultSessionSchema); err != nil {
 		os.Remove(dbPath)
 		return nil, fmt.Errorf("init session schema: %w", err)
 	}

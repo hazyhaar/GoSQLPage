@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	_ "embed"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -31,18 +30,6 @@ import (
 	"github.com/hazyhaar/gopage/v2/pkg/session"
 	_ "modernc.org/sqlite"
 )
-
-//go:embed ../../data/schema_content.sql
-var contentSchema string
-
-//go:embed ../../data/schema_schema.sql
-var schemaSchema string
-
-//go:embed ../../data/schema_users.sql
-var usersSchema string
-
-//go:embed ../../data/schema_audit.sql
-var auditSchema string
 
 func main() {
 	// Parse flags
@@ -435,23 +422,42 @@ func initDatabases(dataDir, contentPath, schemaPath, usersPath, auditPath string
 		return fmt.Errorf("create data dir: %w", err)
 	}
 
+	// Schema files are in v2/data/
+	schemaDir := filepath.Join(filepath.Dir(dataDir), "data")
+
 	// Initialize content.db
-	if err := initDB(contentPath, contentSchema, logger); err != nil {
+	contentSchema, err := os.ReadFile(filepath.Join(schemaDir, "schema_content.sql"))
+	if err != nil {
+		return fmt.Errorf("read content schema: %w", err)
+	}
+	if err := initDB(contentPath, string(contentSchema), logger); err != nil {
 		return fmt.Errorf("init content.db: %w", err)
 	}
 
 	// Initialize schema.db
-	if err := initDB(schemaPath, schemaSchema, logger); err != nil {
+	schemaSchema, err := os.ReadFile(filepath.Join(schemaDir, "schema_schema.sql"))
+	if err != nil {
+		return fmt.Errorf("read schema schema: %w", err)
+	}
+	if err := initDB(schemaPath, string(schemaSchema), logger); err != nil {
 		return fmt.Errorf("init schema.db: %w", err)
 	}
 
 	// Initialize users.db
-	if err := initDB(usersPath, usersSchema, logger); err != nil {
+	usersSchema, err := os.ReadFile(filepath.Join(schemaDir, "schema_users.sql"))
+	if err != nil {
+		return fmt.Errorf("read users schema: %w", err)
+	}
+	if err := initDB(usersPath, string(usersSchema), logger); err != nil {
 		return fmt.Errorf("init users.db: %w", err)
 	}
 
 	// Initialize audit.db
-	if err := initDB(auditPath, auditSchema, logger); err != nil {
+	auditSchema, err := os.ReadFile(filepath.Join(schemaDir, "schema_audit.sql"))
+	if err != nil {
+		return fmt.Errorf("read audit schema: %w", err)
+	}
+	if err := initDB(auditPath, string(auditSchema), logger); err != nil {
 		return fmt.Errorf("init audit.db: %w", err)
 	}
 
