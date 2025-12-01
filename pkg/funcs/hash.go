@@ -31,7 +31,7 @@ func HashFuncs() []Func {
 		{
 			Name:          "verify_password",
 			NumArgs:       2,
-			Deterministic: false, // Result depends on stored hash which varies per user
+			Deterministic: true, // Always returns same result for same password and hash inputs
 			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
 				password := args[0].Text()
 				storedHash := args[1].Text()
