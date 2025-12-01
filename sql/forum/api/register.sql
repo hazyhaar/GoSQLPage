@@ -43,10 +43,8 @@ SELECT CASE
     WHEN EXISTS(SELECT 1 FROM forum_users WHERE username = $username) THEN
         '<div class="alert alert-error">Ce nom utilisateur est déjà pris</div>
          <script>setTimeout(() => window.history.back(), 2000);</script>'
-    WHEN EXISTS(SELECT 1 FROM forum_users WHERE email = $email) THEN
+    WHEN EXISTS(SELECT 1 FROM forum_users WHERE email = $email)
+         AND NOT EXISTS(SELECT 1 FROM forum_users WHERE username = $username) THEN
         '<div class="alert alert-error">Cette adresse email est déjà utilisée</div>
-         <script>setTimeout(() => window.history.back(), 2000);</script>'
-    ELSE
-        '<div class="alert alert-error">Erreur lors de la création du compte</div>
          <script>setTimeout(() => window.history.back(), 2000);</script>'
 END as html;
