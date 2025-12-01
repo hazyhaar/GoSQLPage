@@ -156,12 +156,55 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer release()
 
+	// For POST requests, wrap execution in a transaction to ensure writes persist
+	// zombiezen.com/go/sqlite requires explicit transactions for data to be committed
+	if r.Method == http.MethodPost {
+		beginStmt, _, err := conn.PrepareTransient("BEGIN IMMEDIATE")
+		if err != nil {
+			s.logger.Error("prepare begin", "error", err)
+			s.renderError(w, r, http.StatusInternalServerError, "Database error")
+			return
+		}
+		_, err = beginStmt.Step()
+		beginStmt.Finalize()
+		if err != nil {
+			s.logger.Error("begin transaction", "error", err)
+			s.renderError(w, r, http.StatusInternalServerError, "Database error")
+			return
+		}
+	}
+
 	// Execute queries
 	results, err := s.executor.ExecuteFile(ctx, conn, file, params)
 	if err != nil {
+		// Rollback on error for POST requests
+		if r.Method == http.MethodPost {
+			rollbackStmt, _, _ := conn.PrepareTransient("ROLLBACK")
+			if rollbackStmt != nil {
+				rollbackStmt.Step()
+				rollbackStmt.Finalize()
+			}
+		}
 		s.logger.Error("execute error", "error", err)
 		s.renderError(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Commit transaction for POST requests
+	if r.Method == http.MethodPost {
+		commitStmt, _, err := conn.PrepareTransient("COMMIT")
+		if err != nil {
+			s.logger.Error("prepare commit", "error", err)
+			s.renderError(w, r, http.StatusInternalServerError, "Failed to save changes")
+			return
+		}
+		_, err = commitStmt.Step()
+		commitStmt.Finalize()
+		if err != nil {
+			s.logger.Error("commit transaction", "error", err)
+			s.renderError(w, r, http.StatusInternalServerError, "Failed to save changes")
+			return
+		}
 	}
 
 	// Check for HTMX request

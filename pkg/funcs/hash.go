@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 
+	"golang.org/x/crypto/bcrypt"
 	"zombiezen.com/go/sqlite"
 )
 
@@ -15,15 +16,29 @@ func HashFuncs() []Func {
 		{
 			Name:          "hash_password",
 			NumArgs:       1,
+			Deterministic: false, // bcrypt generates random salt each time
+			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
+				password := args[0].Text()
+				// Cost 12 is a good balance between security and performance
+				hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+				if err != nil {
+					return sqlite.TextValue(""), err
+				}
+				return sqlite.TextValue(string(hash)), nil
+			},
+		},
+		{
+			Name:          "verify_password",
+			NumArgs:       2,
 			Deterministic: true,
 			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
-				// WARNING: This is for DEMO/TESTING purposes ONLY!
-				// SHA256 with a fixed salt is NOT secure for production.
-				// Use bcrypt, scrypt, or Argon2 with unique salts in production.
 				password := args[0].Text()
-				salt := "gosqlpage_forum_salt_2024"
-				sum := sha256.Sum256([]byte(salt + password))
-				return sqlite.TextValue(hex.EncodeToString(sum[:])), nil
+				storedHash := args[1].Text()
+				err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
+				if err != nil {
+					return sqlite.IntegerValue(0), nil // Password doesn't match
+				}
+				return sqlite.IntegerValue(1), nil // Password matches
 			},
 		},
 		{

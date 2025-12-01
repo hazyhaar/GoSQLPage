@@ -84,7 +84,7 @@ func (e *Executor) Execute(ctx context.Context, conn *sqlite.Conn, query Query, 
 			result.Rows = append(result.Rows, row)
 		}
 	} else {
-		// Execute non-SELECT query
+		// Execute non-SELECT query (INSERT/UPDATE/DELETE)
 		_, err := stmt.Step()
 		if err != nil {
 			return nil, fmt.Errorf("exec: %w", err)
