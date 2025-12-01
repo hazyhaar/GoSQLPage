@@ -156,8 +156,8 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer release()
 
-	// For POST requests, wrap execution in a transaction to ensure writes persist
-	// zombiezen.com/go/sqlite requires explicit transactions for data to be committed
+	// For POST requests, wrap execution in a transaction to ensure atomicity
+	// across multiple SQL statements and proper write persistence with connection pooling
 	if r.Method == http.MethodPost {
 		beginStmt, _, err := conn.PrepareTransient("BEGIN IMMEDIATE")
 		if err != nil {
@@ -169,6 +169,11 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 		beginStmt.Finalize()
 		if err != nil {
 			s.logger.Error("begin transaction", "error", err)
+			// Attempt to rollback any partial transaction state
+			if rollbackStmt, _, _ := conn.PrepareTransient("ROLLBACK"); rollbackStmt != nil {
+				defer rollbackStmt.Finalize()
+				rollbackStmt.Step()
+			}
 			s.renderError(w, r, http.StatusInternalServerError, "Database error")
 			return
 		}
@@ -179,10 +184,9 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Rollback on error for POST requests
 		if r.Method == http.MethodPost {
-			rollbackStmt, _, _ := conn.PrepareTransient("ROLLBACK")
-			if rollbackStmt != nil {
+			if rollbackStmt, _, _ := conn.PrepareTransient("ROLLBACK"); rollbackStmt != nil {
+				defer rollbackStmt.Finalize()
 				rollbackStmt.Step()
-				rollbackStmt.Finalize()
 			}
 		}
 		s.logger.Error("execute error", "error", err)
@@ -195,6 +199,11 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 		commitStmt, _, err := conn.PrepareTransient("COMMIT")
 		if err != nil {
 			s.logger.Error("prepare commit", "error", err)
+			// Rollback on commit prepare failure
+			if rollbackStmt, _, _ := conn.PrepareTransient("ROLLBACK"); rollbackStmt != nil {
+				defer rollbackStmt.Finalize()
+				rollbackStmt.Step()
+			}
 			s.renderError(w, r, http.StatusInternalServerError, "Failed to save changes")
 			return
 		}
@@ -202,6 +211,11 @@ func (s *Server) handlePage(w http.ResponseWriter, r *http.Request) {
 		commitStmt.Finalize()
 		if err != nil {
 			s.logger.Error("commit transaction", "error", err)
+			// Rollback on commit failure
+			if rollbackStmt, _, _ := conn.PrepareTransient("ROLLBACK"); rollbackStmt != nil {
+				defer rollbackStmt.Finalize()
+				rollbackStmt.Step()
+			}
 			s.renderError(w, r, http.StatusInternalServerError, "Failed to save changes")
 			return
 		}
