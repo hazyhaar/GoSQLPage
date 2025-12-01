@@ -22,7 +22,8 @@ func HashFuncs() []Func {
 				// Cost 12 is a good balance between security and performance
 				hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 				if err != nil {
-					return sqlite.TextValue(""), err
+					// Return NULL on error to prevent empty password hashes
+					return sqlite.Value{}, err
 				}
 				return sqlite.TextValue(string(hash)), nil
 			},
@@ -30,7 +31,7 @@ func HashFuncs() []Func {
 		{
 			Name:          "verify_password",
 			NumArgs:       2,
-			Deterministic: true,
+			Deterministic: false, // Result depends on stored hash which varies per user
 			Func: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
 				password := args[0].Text()
 				storedHash := args[1].Text()
